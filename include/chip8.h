@@ -1,2 +1,5 @@
-int a = 4;
+#include <stdint.h>
+#define CHIP8_BUFFER_WIDTH 64
+#define CHIP8_BUFFER_HEIGHT 32
 
+uint8_t CHIP8_BUFFER[CHIP8_BUFFER_HEIGHT][CHIP8_BUFFER_WIDTH] = {0};
