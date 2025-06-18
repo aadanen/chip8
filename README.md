@@ -1,5 +1,5 @@
 # chip8
-My take on a CHIP-8 Virtual Machine
+My take on a CHIP-8 Interpreter
 
 ## building
 ```
