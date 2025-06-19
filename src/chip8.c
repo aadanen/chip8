@@ -102,6 +102,20 @@ void CHIP8_initialize() {
 
 
 void CHIP8_load(char* rom_path) {
+  FILE* fptr = fopen(rom_path, "r");
+  if (fptr == NULL) {
+    printf("failed to open rom file");
+    abort();
+  }
+
+  uint8_t buf;
+  uint8_t* ramptr = chip8_ram + 0x200;
+  while (buf = fgetc(fptr)) {
+    if (buf = EOF)
+      break;
+    *ramptr = buf;
+    ramptr++;
+  }
   return;
 }
 
