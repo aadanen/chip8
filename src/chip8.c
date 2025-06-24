@@ -112,12 +112,21 @@ void CHIP8_8XY3(uint8_t X, uint8_t Y) {
 }
 void CHIP8_8XY4(uint8_t X, uint8_t Y) {
   if (chip8_v[Y] > 255 - chip8_v[X]) {
+    chip8_v[X] += chip8_v[Y];
     chip8_v[0xf] = 1;
+  } else {
+    chip8_v[X] += chip8_v[Y];
+    chip8_v[0xf] = 0;
   }
-  chip8_v[X] += chip8_v[Y];
 }
 void CHIP8_8XY5(uint8_t X, uint8_t Y) {
-  chip8_v[X] -= chip8_v[Y];
+  if (chip8_v[X] > chip8_v[Y]) {
+    chip8_v[X] -= chip8_v[Y];
+    chip8_v[0xf] = 1;
+  } else {
+    chip8_v[X] -= chip8_v[Y];
+    chip8_v[0xf] = 0;
+  }
 }
 
 void CHIP8_8XY6(uint8_t X, uint8_t Y) {
@@ -128,7 +137,13 @@ void CHIP8_8XY6(uint8_t X, uint8_t Y) {
   chip8_v[X] >>= 1;
 }
 void CHIP8_8XY7(uint8_t X, uint8_t Y) {
-  chip8_v[X] = chip8_v[Y] - chip8_v[X];
+  if (chip8_v[Y] > chip8_v[X]) {
+    chip8_v[X] = chip8_v[Y] - chip8_v[X];
+    chip8_v[0xf] = 1;
+  } else {
+    chip8_v[X] = chip8_v[Y] - chip8_v[X];
+    chip8_v[0xf] = 0;
+  }
 }
 void CHIP8_8XYE(uint8_t X, uint8_t Y) {
   if (CHIP8_OLD_SHIFT) {
@@ -192,7 +207,60 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
   //chip8_draw_flag = 1;
 }
 
+void CHIP8_EX9E(uint8_t X, uint32_t key) {
+  if (chip8_v[X] == (uint8_t)key)
+    chip8_pc += 2;
+}
+void CHIP8_EXA1(uint8_t X, uint32_t key) {
+  if (chip8_v[X] != (uint8_t)key)
+    chip8_pc += 2;
+}
 
+
+
+void CHIP8_FX07(uint8_t X) {
+  chip8_v[X] = chip8_delay;
+}
+void CHIP8_FX15(uint8_t X) {
+  chip8_delay = chip8_v[X];
+}
+void CHIP8_FX18(uint8_t X) {
+  chip8_sound = chip8_v[X];
+}
+// spaceflight 2091 behavior
+void CHIP8_FX1E(uint8_t X) {
+  chip8_index += chip8_v[X];
+  chip8_v[0xf] = chip8_index > CHIP8_RAM_SIZE;
+}
+void CHIP8_FX0A(uint8_t X, uint32_t key) {
+  if (key == 0) {
+    chip8_pc -= 2;
+  } else {
+    chip8_v[X] = (uint8_t)key;
+  }
+}
+void CHIP8_FX29(uint8_t X) {
+  // font starts at chip8_ram[80]
+  // each letter is 5 bytes
+  chip8_index = (uint16_t)(80+(5*(X & 0xf)));
+}
+
+// example: if vx = 156, put 1, 5, and 6 at index, index+1, index+2
+void CHIP8_FX33(uint8_t X) {
+  chip8_ram[chip8_index] = (chip8_v[X]/100) % 10;
+  chip8_ram[chip8_index+1] = (chip8_v[X]/10) % 10;
+  chip8_ram[chip8_index+2] = chip8_v[X] % 10;
+}
+void CHIP8_FX55(uint8_t X) {
+  for (int i = 0; i <= X; i++) {
+    chip8_ram[chip8_index + i] = chip8_v[i];
+  }
+}
+void CHIP8_FX65(uint8_t X) {
+  for (int i = 0; i <= X; i++) {
+    chip8_v[i] = chip8_ram[chip8_index + i];
+  }
+}
 
 // set up the CHIP8
 // * loads font into RAM
@@ -250,7 +318,7 @@ uint16_t CHIP8_fetch() {
   return instruction;
 }
 
-void CHIP8_cycle() {
+void CHIP8_cycle(uint32_t key) {
   uint16_t instruction = CHIP8_fetch();
 
   // this is wasting work because not every instruction will use these values
@@ -337,6 +405,43 @@ void CHIP8_cycle() {
     case 0xD:
       CHIP8_DXYN(X, Y, N);
       break;
+    case 0xE:
+      if (NN == 0x9E) {
+        CHIP8_EX9E(X, key);
+      } else {
+        CHIP8_EXA1(X, key);
+      }
+      break;
+    case 0xF:
+      switch (NN) {
+        case 0x07:
+          CHIP8_FX07(X);
+          break;
+        case 0x15:
+          CHIP8_FX15(X);
+          break;
+        case 0x18:
+          CHIP8_FX18(X);
+          break;
+        case 0x1E:
+          CHIP8_FX1E(X);
+          break;
+        case 0x0A:
+          CHIP8_FX0A(X, key);
+          break;
+        case 0x29:
+          CHIP8_FX29(X);
+          break;
+        case 0x33:
+          CHIP8_FX33(X);
+          break;
+        case 0x55:
+          CHIP8_FX55(X);
+          break;
+        case 0x65:
+          CHIP8_FX65(X);
+          break;
+      }
   }
 }
 

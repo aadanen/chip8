@@ -87,7 +87,7 @@ int main(int argc, char** argv) {
       // maybe later i can run the two processes seperately
       // like one thread is the screen and another thread is the emulator
       for (uint32_t i = 0; i < cycles_per_frame; i++) {
-        CHIP8_cycle();
+        CHIP8_cycle(key);
       }
 
       // Draw
