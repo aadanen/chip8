@@ -8,6 +8,8 @@
 #define CHIP8_NUM_REGISTERS 16
 #define CHIP8_STACK_DEPTH 16
 #define CHIP8_CLOCK_SPEED 700
+#define CHIP8_OLD_SHIFT 1
+#define CHIP8_OLD_JUMP_OFFSET 1
 
 extern uint8_t chip8_screen[CHIP8_SCREEN_HEIGHT][CHIP8_SCREEN_WIDTH];
 extern uint8_t chip8_delay;

@@ -3,6 +3,7 @@
 #include <string.h>
 #include <chip8.h>
 #include <stdlib.h>
+#include <time.h>
 
 uint8_t chip8_ram[CHIP8_RAM_SIZE];
 uint8_t chip8_screen[CHIP8_SCREEN_HEIGHT][CHIP8_SCREEN_WIDTH];
@@ -96,6 +97,48 @@ void CHIP8_7XNN(uint8_t X, uint8_t NN) {
   chip8_v[X] += NN;
 }
 
+
+void CHIP8_8XY0(uint8_t X, uint8_t Y) {
+  chip8_v[X] = chip8_v[Y];
+}
+void CHIP8_8XY1(uint8_t X, uint8_t Y) {
+  chip8_v[X] = chip8_v[X] | chip8_v[Y];
+}
+void CHIP8_8XY2(uint8_t X, uint8_t Y) {
+  chip8_v[X] = chip8_v[X] & chip8_v[Y];
+}
+void CHIP8_8XY3(uint8_t X, uint8_t Y) {
+  chip8_v[X] = chip8_v[X] ^ chip8_v[Y];
+}
+void CHIP8_8XY4(uint8_t X, uint8_t Y) {
+  if (chip8_v[Y] > 255 - chip8_v[X]) {
+    chip8_v[0xf] = 1;
+  }
+  chip8_v[X] += chip8_v[Y];
+}
+void CHIP8_8XY5(uint8_t X, uint8_t Y) {
+  chip8_v[X] -= chip8_v[Y];
+}
+
+void CHIP8_8XY6(uint8_t X, uint8_t Y) {
+  if (CHIP8_OLD_SHIFT) {
+    chip8_v[X] = chip8_v[Y];
+  }
+  chip8_v[0xf] = chip8_v[X] & 0x1;
+  chip8_v[X] >>= 1;
+}
+void CHIP8_8XY7(uint8_t X, uint8_t Y) {
+  chip8_v[X] = chip8_v[Y] - chip8_v[X];
+}
+void CHIP8_8XYE(uint8_t X, uint8_t Y) {
+  if (CHIP8_OLD_SHIFT) {
+    chip8_v[X] = chip8_v[Y];
+  }
+  chip8_v[0xf] = chip8_v[X] & 0x80;
+  chip8_v[X] <<= 1;
+}
+
+
 // skip the next instruction if vX != vY
 void CHIP8_9XY0(uint8_t X, uint8_t Y) {
   if (chip8_v[X] != chip8_v[Y]) {
@@ -106,6 +149,19 @@ void CHIP8_9XY0(uint8_t X, uint8_t Y) {
 // set chip8_index to NNN
 void CHIP8_ANNN(uint16_t NNN) {
   chip8_index = NNN;
+}
+
+void CHIP8_BNNN(uint8_t X, uint16_t NNN) {
+  if (CHIP8_OLD_JUMP_OFFSET) {
+    chip8_pc = chip8_v[0]+NNN;
+  } else {
+    chip8_pc = chip8_v[X]+NNN;
+  }
+}
+
+void CHIP8_CXNN(uint8_t X, uint8_t NN) {
+  int r = rand();
+  chip8_v[X] = (uint8_t)(r & (int)NN);
 }
 
 // display!
@@ -143,6 +199,7 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
 void CHIP8_initialize() {
   // load the font into memory
   memcpy(chip8_ram+80, FONT_DATA, 5*16*sizeof(uint8_t));
+  srand(time(NULL));
 }
 
 
@@ -234,11 +291,48 @@ void CHIP8_cycle() {
     case 0x7:
       CHIP8_7XNN(X, NN);
       break;
+    case 0x8:
+      switch (N) {
+        case 0x0:
+          CHIP8_8XY0(X, Y);
+          break;
+        case 0x1:
+          CHIP8_8XY1(X, Y);
+          break;
+        case 0x2:
+          CHIP8_8XY2(X, Y);
+          break;
+        case 0x3:
+          CHIP8_8XY3(X, Y);
+          break;
+        case 0x4:
+          CHIP8_8XY4(X, Y);
+          break;
+        case 0x5:
+          CHIP8_8XY5(X, Y);
+          break;
+        case 0x6:
+          CHIP8_8XY6(X, Y);
+          break;
+        case 0x7:
+          CHIP8_8XY7(X, Y);
+          break;
+        case 0xE:
+          CHIP8_8XYE(X, Y);
+          break;
+      }
+      break;
     case 0x9:
       CHIP8_9XY0(X, Y);
       break;
     case 0xA:
       CHIP8_ANNN(NNN);
+      break;
+    case 0xB:
+      CHIP8_BNNN(X, NNN);
+      break;
+    case 0xC:
+      CHIP8_CXNN(X, NN);
       break;
     case 0xD:
       CHIP8_DXYN(X, Y, N);
