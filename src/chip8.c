@@ -11,9 +11,12 @@ uint8_t chip8_sound = 0;
 uint8_t chip8_v[CHIP8_NUM_REGISTERS];
 uint16_t chip8_pc = 0x200;
 uint16_t chip8_index = 0x200;
+uint8_t chip8_run_flag = 0;
+uint8_t chip8_draw_flag = 0;
 
 uint16_t chip8_stack[CHIP8_STACK_DEPTH];
 uint8_t chip8_stack_top = 0;
+
 
 uint8_t FONT_DATA[5*16] = {
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -34,20 +37,54 @@ uint8_t FONT_DATA[5*16] = {
   0xF0, 0x80, 0xF0, 0x80, 0x80  // F
 };
 
+uint16_t CHIP8_pop();
+void CHIP8_push(uint16_t);
+
 // INSTRUCTIONS //
 
 // clear screen. turn all pixels in display buffer to 0
 void CHIP8_00E0() {
   memset(chip8_screen, 0, sizeof(chip8_screen));
+  //chip8_draw_flag = 1;
 }
 
+// return to the address at the top of the stack
 void CHIP8_00EE() {
+  chip8_pc = CHIP8_pop();
 }
 
 // jump to NNN
 void CHIP8_1NNN(uint16_t NNN) {
   chip8_pc = NNN;
 }
+
+// push current location to the stack and jump to NNN
+void CHIP8_2NNN(uint16_t NNN) {
+  CHIP8_push(chip8_pc);
+  chip8_pc = NNN;
+}
+
+// skip the next instruction if vX == NN
+void CHIP8_3XNN(uint8_t X, uint8_t NN) {
+  if (chip8_v[X] == NN) {
+    chip8_pc += 2;
+  }
+}
+
+// skip the next instruction if vX != NN
+void CHIP8_4XNN(uint8_t X, uint8_t NN) {
+  if (chip8_v[X] != NN) {
+    chip8_pc += 2;
+  }
+}
+
+// skip the next instruction if vX == vY
+void CHIP8_5XY0(uint8_t X, uint8_t Y) {
+  if (chip8_v[X] == chip8_v[Y]) {
+    chip8_pc += 2;
+  }
+}
+
 
 // set VX to NN
 void CHIP8_6XNN(uint8_t X, uint8_t NN) {
@@ -57,6 +94,13 @@ void CHIP8_6XNN(uint8_t X, uint8_t NN) {
 // add NN to VX
 void CHIP8_7XNN(uint8_t X, uint8_t NN) {
   chip8_v[X] += NN;
+}
+
+// skip the next instruction if vX != vY
+void CHIP8_9XY0(uint8_t X, uint8_t Y) {
+  if (chip8_v[X] != chip8_v[Y]) {
+    chip8_pc += 2;
+  }
 }
 
 // set chip8_index to NNN
@@ -72,23 +116,24 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
 
   // for N rows
   for (uint8_t i = 0; i < N; i++) {
-    uint8_t row = chip8_ram[chip8_index+i];
-    // for each bit in the row
-    for (uint8_t offset = 7; offset >= 0; offset--) {
-      uint8_t spritebit = (row >> offset) & 0x1;
-      uint8_t pixel = chip8_screen[y + i][x + (7-offset)];
-      if (spritebit && pixel) {
-        chip8_screen[y + i][x + (7-offset)] = 0;
-        chip8_v[0xf] = 1;
-      } else if (spritebit && !pixel) {
-        chip8_screen[y + i][x + (7-offset)] = 1;
-      }
-    }
-   
     if (y + i == CHIP8_SCREEN_HEIGHT) {
       return;
     }
+
+    uint8_t row = chip8_ram[chip8_index+i];
+    // for each bit in the row
+    for (uint8_t j = 0; j < 8; j++) {
+      uint8_t spritebit = row & (0x80 >> j);
+      uint8_t* pixel = &(chip8_screen[y + i][x + j]);
+      if (spritebit && *pixel) {
+        *pixel = 0;
+        chip8_v[0xf] = 1;
+      } else if (spritebit && !*pixel) {
+        *pixel = 1;
+      }
+    }
   }
+  //chip8_draw_flag = 1;
 }
 
 
@@ -102,20 +147,21 @@ void CHIP8_initialize() {
 
 
 void CHIP8_load(char* rom_path) {
-  FILE* fptr = fopen(rom_path, "r");
-  if (fptr == NULL) {
-    printf("failed to open rom file");
+  FILE* fptr = fopen(rom_path, "rb");
+  if (!fptr) {
+    printf("failed to open rom file\n");
     abort();
   }
+  printf("reading rom\n");
 
-  uint8_t buf;
+  int32_t buf;
   uint8_t* ramptr = chip8_ram + 0x200;
-  while (buf = fgetc(fptr)) {
-    if (buf = EOF)
-      break;
-    *ramptr = buf;
+  while ((buf = fgetc(fptr)) != EOF) {
+    *ramptr = (uint8_t)buf;
     ramptr++;
   }
+  printf("done\n");
+  fclose(fptr);
   return;
 }
 
@@ -170,11 +216,26 @@ void CHIP8_cycle() {
     case 0x1:
       CHIP8_1NNN(NNN);
       break;
+    case 0x2:
+      CHIP8_2NNN(NNN);
+      break;
+    case 0x3:
+      CHIP8_3XNN(X, NN);
+      break;
+    case 0x4:
+      CHIP8_4XNN(X, NN);
+      break;
+    case 0x5:
+      CHIP8_5XY0(X, Y);
+      break;
     case 0x6:
       CHIP8_6XNN(X, NN);
       break;
     case 0x7:
       CHIP8_7XNN(X, NN);
+      break;
+    case 0x9:
+      CHIP8_9XY0(X, Y);
       break;
     case 0xA:
       CHIP8_ANNN(NNN);

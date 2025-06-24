@@ -1,4 +1,5 @@
 #include <stdint.h>
+#include <stdio.h>
 #include <raylib.h>
 #include <chip8.h>
 
@@ -44,9 +45,15 @@ uint8_t normalize_input(uint32_t keycode) {
   return 0;
 }
 
-int main(void) {
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    printf("Bad arguments\n");
+    return 1;
+  }
+
+
+
   // Initialization
-  //--------------------------------------------------------------------------------------
   uint32_t screenWidth = 1600;
   uint32_t screenHeight = 800;
   uint32_t pixelHeight = screenHeight/CHIP8_SCREEN_HEIGHT;
@@ -55,9 +62,16 @@ int main(void) {
   SetTraceLogLevel(LOG_ERROR);
 
   CHIP8_initialize();
-  InitWindow(screenWidth, screenHeight, "CHIP8");
+  CHIP8_load(argv[1]);
 
-  SetTargetFPS(60);               // Set our game to run at 60 frames-per-second
+
+
+  InitWindow(screenWidth, screenHeight, "CHIP8");
+  const uint32_t target_fps = 60;
+  const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
+
+  SetTargetFPS(target_fps); 
+
   //--------------------------------------------------------------------------------------
 
   // Main game loop
@@ -68,7 +82,13 @@ int main(void) {
       // TODO: Update your variables here
       //----------------------------------------------------------------------------------
       key = normalize_input(GetKeyPressed());
-      CHIP8_cycle();
+
+      // 1 frame will have roughly 11 clock cycles
+      // maybe later i can run the two processes seperately
+      // like one thread is the screen and another thread is the emulator
+      for (uint32_t i = 0; i < cycles_per_frame; i++) {
+        CHIP8_cycle();
+      }
 
       // Draw
       //----------------------------------------------------------------------------------
@@ -76,17 +96,13 @@ int main(void) {
 
       ClearBackground(BKGDCOLOR);
 
-      // loop over the CHIP8 buffer
-      /*
       for (uint8_t i = 0; i < CHIP8_SCREEN_HEIGHT; i++) {
         for (uint8_t j = 0; j < CHIP8_SCREEN_WIDTH; j++) {
-          if (CHIP8_SCREEN[i][j] != 0) {
-            DrawRectangle(i*pixelHeight, j*pixelWidth, pixelWidth, pixelHeight, PIXELCOLOR);
+          if (chip8_screen[i][j] != 0) {
+            DrawRectangle(j*pixelWidth, i*pixelHeight, pixelWidth, pixelHeight, PIXELCOLOR);
           }
         }
       }
-      */
-
 
       EndDrawing();
       //----------------------------------------------------------------------------------
