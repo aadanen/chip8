@@ -120,7 +120,7 @@ void CHIP8_8XY4(uint8_t X, uint8_t Y) {
   }
 }
 void CHIP8_8XY5(uint8_t X, uint8_t Y) {
-  if (chip8_v[X] > chip8_v[Y]) {
+  if (chip8_v[X] >= chip8_v[Y]) {
     chip8_v[X] -= chip8_v[Y];
     chip8_v[0xf] = 1;
   } else {
@@ -133,11 +133,16 @@ void CHIP8_8XY6(uint8_t X, uint8_t Y) {
   if (CHIP8_OLD_SHIFT) {
     chip8_v[X] = chip8_v[Y];
   }
-  chip8_v[0xf] = chip8_v[X] & 0x1;
-  chip8_v[X] >>= 1;
+  if (chip8_v[X] & 0x1) {
+    chip8_v[X] >>= 1;
+    chip8_v[0xf] = 1;
+  } else {
+    chip8_v[X] >>= 1;
+    chip8_v[0xf] = 0;
+  }
 }
 void CHIP8_8XY7(uint8_t X, uint8_t Y) {
-  if (chip8_v[Y] > chip8_v[X]) {
+  if (chip8_v[Y] >= chip8_v[X]) {
     chip8_v[X] = chip8_v[Y] - chip8_v[X];
     chip8_v[0xf] = 1;
   } else {
@@ -149,8 +154,13 @@ void CHIP8_8XYE(uint8_t X, uint8_t Y) {
   if (CHIP8_OLD_SHIFT) {
     chip8_v[X] = chip8_v[Y];
   }
-  chip8_v[0xf] = chip8_v[X] & 0x80;
-  chip8_v[X] <<= 1;
+  if (chip8_v[X] & 0x80) {
+    chip8_v[X] <<= 1;
+    chip8_v[0xf] = 1;
+  } else {
+    chip8_v[X] <<= 1;
+    chip8_v[0xf] = 0;
+  }
 }
 
 
@@ -207,12 +217,19 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
   //chip8_draw_flag = 1;
 }
 
-void CHIP8_EX9E(uint8_t X, uint32_t key) {
-  if (chip8_v[X] == (uint8_t)key)
+void CHIP8_EX9E(uint8_t X, uint8_t key) {
+  if (key != NO_KEY_PRESSED) {
+    printf("EX9E(%d)\n", key);
+  }
+  if (key != NO_KEY_PRESSED && key == chip8_v[X]) {
     chip8_pc += 2;
+  }
 }
-void CHIP8_EXA1(uint8_t X, uint32_t key) {
-  if (chip8_v[X] != (uint8_t)key)
+void CHIP8_EXA1(uint8_t X, uint8_t key) {
+  if (key != NO_KEY_PRESSED) {
+    printf("EXA1(%d)\n", key);
+  }
+  if (key != NO_KEY_PRESSED && key != chip8_v[X])
     chip8_pc += 2;
 }
 
@@ -232,11 +249,11 @@ void CHIP8_FX1E(uint8_t X) {
   chip8_index += chip8_v[X];
   chip8_v[0xf] = chip8_index > CHIP8_RAM_SIZE;
 }
-void CHIP8_FX0A(uint8_t X, uint32_t key) {
-  if (key == 0) {
+void CHIP8_FX0A(uint8_t X, uint8_t key) {
+  if (key == NO_KEY_PRESSED) {
     chip8_pc -= 2;
   } else {
-    chip8_v[X] = (uint8_t)key;
+    chip8_v[X] = key;
   }
 }
 void CHIP8_FX29(uint8_t X) {
@@ -318,7 +335,7 @@ uint16_t CHIP8_fetch() {
   return instruction;
 }
 
-void CHIP8_cycle(uint32_t key) {
+void CHIP8_cycle(uint8_t key) {
   uint16_t instruction = CHIP8_fetch();
 
   // this is wasting work because not every instruction will use these values

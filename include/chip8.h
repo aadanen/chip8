@@ -11,6 +11,8 @@
 #define CHIP8_OLD_SHIFT 1
 #define CHIP8_OLD_JUMP_OFFSET 1
 
+#define NO_KEY_PRESSED 100
+
 extern uint8_t chip8_screen[CHIP8_SCREEN_HEIGHT][CHIP8_SCREEN_WIDTH];
 extern uint8_t chip8_delay;
 extern uint8_t chip8_sound;
@@ -21,6 +23,6 @@ extern uint8_t chip8_ram[CHIP8_RAM_SIZE];
 
 void CHIP8_initialize();
 void CHIP8_load(char* rom_path);
-void CHIP8_cycle();
+void CHIP8_cycle(uint8_t key);
 
 #endif /* CHIP8_H */

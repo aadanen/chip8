@@ -42,7 +42,7 @@ uint8_t normalize_input(uint32_t keycode) {
     case 86:
       return 15;
   }
-  return 0;
+  return NO_KEY_PRESSED;
 }
 
 int main(int argc, char** argv) {
@@ -58,7 +58,7 @@ int main(int argc, char** argv) {
   uint32_t screenHeight = 800;
   uint32_t pixelHeight = screenHeight/CHIP8_SCREEN_HEIGHT;
   uint32_t pixelWidth = screenWidth/CHIP8_SCREEN_WIDTH;
-  uint32_t key = 0;
+  uint8_t key = NO_KEY_PRESSED;
   SetTraceLogLevel(LOG_ERROR);
 
   CHIP8_initialize();
@@ -81,8 +81,12 @@ int main(int argc, char** argv) {
       //----------------------------------------------------------------------------------
       // TODO: Update your variables here
       //----------------------------------------------------------------------------------
+      //
+      
       key = normalize_input(GetKeyPressed());
-
+      if (key != NO_KEY_PRESSED) {
+        printf("(%d)\n", key);
+      }
       // 1 frame will have roughly 11 clock cycles
       // maybe later i can run the two processes seperately
       // like one thread is the screen and another thread is the emulator
