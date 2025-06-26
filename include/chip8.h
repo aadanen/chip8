@@ -23,6 +23,6 @@ extern uint8_t chip8_ram[CHIP8_RAM_SIZE];
 
 void CHIP8_initialize();
 void CHIP8_load(char* rom_path);
-void CHIP8_cycle(uint8_t key);
+void CHIP8_cycle(uint16_t keyboard);
 
 #endif /* CHIP8_H */

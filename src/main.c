@@ -6,65 +6,22 @@
 #define PIXELCOLOR RAYWHITE
 #define BKGDCOLOR BLACK
 
-
-uint8_t normalize_input(uint32_t keycode) {
-  switch (keycode) {
-    case 49:
-      return 0;
-    case 50:
-      return 1;
-    case 51:
-      return 2;
-    case 52:
-      return 3;
-    case 81:
-      return 4;
-    case 87:
-      return 5;
-    case 69:
-      return 6;
-    case 82:
-      return 7;
-    case 65:
-      return 8;
-    case 83:
-      return 9;
-    case 68:
-      return 10;
-    case 70:
-      return 11;
-    case 90:
-      return 12;
-    case 88:
-      return 13;
-    case 67:
-      return 14;
-    case 86:
-      return 15;
-  }
-  return NO_KEY_PRESSED;
-}
-
 int main(int argc, char** argv) {
   if (argc != 2) {
     printf("Bad arguments\n");
     return 1;
   }
 
-
-
   // Initialization
   uint32_t screenWidth = 1600;
   uint32_t screenHeight = 800;
   uint32_t pixelHeight = screenHeight/CHIP8_SCREEN_HEIGHT;
   uint32_t pixelWidth = screenWidth/CHIP8_SCREEN_WIDTH;
-  uint8_t key = NO_KEY_PRESSED;
+  uint16_t keyboard;
   SetTraceLogLevel(LOG_ERROR);
 
   CHIP8_initialize();
   CHIP8_load(argv[1]);
-
-
 
   InitWindow(screenWidth, screenHeight, "CHIP8");
   const uint32_t target_fps = 60;
@@ -72,38 +29,64 @@ int main(int argc, char** argv) {
 
   SetTargetFPS(target_fps); 
 
-  //--------------------------------------------------------------------------------------
-
   // Main game loop
-  while (!WindowShouldClose())    // Detect window close button or ESC key
-  {
-      // Update
-      //----------------------------------------------------------------------------------
-      // TODO: Update your variables here
-      //----------------------------------------------------------------------------------
-      //
-      
-      key = normalize_input(GetKeyPressed());
-      if (key != NO_KEY_PRESSED) {
-        printf("(%d)\n", key);
-      }
-      // 1 frame will have roughly 11 clock cycles
-      // maybe later i can run the two processes seperately
-      // like one thread is the screen and another thread is the emulator
-      for (uint32_t i = 0; i < cycles_per_frame; i++) {
-        CHIP8_cycle(key);
-      }
+  while (!WindowShouldClose()) {
+    
 
-      // Draw
-      //----------------------------------------------------------------------------------
-      BeginDrawing();
+    keyboard = 0;
+    if (IsKeyDown(49))
+      keyboard |= 0x2;
+    if (IsKeyDown(50))
+      keyboard |= 0x4;
+    if (IsKeyDown(51))
+      keyboard |= 0x8;
+    if (IsKeyDown(52))
+      keyboard |= 0x1000;
 
-      ClearBackground(BKGDCOLOR);
+    if (IsKeyDown(81))
+      keyboard |= 0x10;
+    if (IsKeyDown(87))
+      keyboard |= 0x20;
+    if (IsKeyDown(69))
+      keyboard |= 0x40;
+    if (IsKeyDown(82))
+      keyboard |= 0x2000;
 
-      for (uint8_t i = 0; i < CHIP8_SCREEN_HEIGHT; i++) {
-        for (uint8_t j = 0; j < CHIP8_SCREEN_WIDTH; j++) {
-          if (chip8_screen[i][j] != 0) {
-            DrawRectangle(j*pixelWidth, i*pixelHeight, pixelWidth, pixelHeight, PIXELCOLOR);
+    if (IsKeyDown(65))
+      keyboard |= 0x80;
+    if (IsKeyDown(83))
+      keyboard |= 0x100;
+    if (IsKeyDown(68))
+      keyboard |= 0x200;
+    if (IsKeyDown(70))
+      keyboard |= 0x4000;
+
+    if (IsKeyDown(90))
+      keyboard |= 0x400;
+    if (IsKeyDown(88))
+      keyboard |= 0x1;
+    if (IsKeyDown(67))
+      keyboard |= 0x800;
+    if (IsKeyDown(86))
+      keyboard |= 0x8000;
+
+    // 1 frame will have roughly 11 clock cycles
+    // maybe later i can run the two processes seperately
+    // like one thread is the screen and another thread is the emulator
+    for (uint32_t i = 0; i < cycles_per_frame; i++) {
+      CHIP8_cycle(keyboard);
+    }
+
+    // Draw
+    //----------------------------------------------------------------------------------
+    BeginDrawing();
+
+    ClearBackground(BKGDCOLOR);
+
+    for (uint8_t i = 0; i < CHIP8_SCREEN_HEIGHT; i++) {
+      for (uint8_t j = 0; j < CHIP8_SCREEN_WIDTH; j++) {
+        if (chip8_screen[i][j] != 0) {
+          DrawRectangle(j*pixelWidth, i*pixelHeight, pixelWidth, pixelHeight, PIXELCOLOR);
           }
         }
       }

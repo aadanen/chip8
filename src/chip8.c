@@ -10,6 +10,7 @@ uint8_t chip8_screen[CHIP8_SCREEN_HEIGHT][CHIP8_SCREEN_WIDTH];
 uint8_t chip8_delay = 0;
 uint8_t chip8_sound = 0;
 uint8_t chip8_v[CHIP8_NUM_REGISTERS];
+uint16_t chip8_kb = 0;
 uint16_t chip8_pc = 0x200;
 uint16_t chip8_index = 0x200;
 uint8_t chip8_run_flag = 0;
@@ -217,20 +218,15 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
   //chip8_draw_flag = 1;
 }
 
-void CHIP8_EX9E(uint8_t X, uint8_t key) {
-  if (key != NO_KEY_PRESSED) {
-    printf("EX9E(%d)\n", key);
-  }
-  if (key != NO_KEY_PRESSED && key == chip8_v[X]) {
+void CHIP8_EX9E(uint8_t X) {
+  if ((chip8_kb >> chip8_v[X]) & 0x1) {
     chip8_pc += 2;
   }
 }
-void CHIP8_EXA1(uint8_t X, uint8_t key) {
-  if (key != NO_KEY_PRESSED) {
-    printf("EXA1(%d)\n", key);
-  }
-  if (key != NO_KEY_PRESSED && key != chip8_v[X])
+void CHIP8_EXA1(uint8_t X) {
+  if (!((chip8_kb >> chip8_v[X]) & 0x1)) {
     chip8_pc += 2;
+  }
 }
 
 
@@ -249,12 +245,19 @@ void CHIP8_FX1E(uint8_t X) {
   chip8_index += chip8_v[X];
   chip8_v[0xf] = chip8_index > CHIP8_RAM_SIZE;
 }
-void CHIP8_FX0A(uint8_t X, uint8_t key) {
-  if (key == NO_KEY_PRESSED) {
-    chip8_pc -= 2;
-  } else {
-    chip8_v[X] = key;
+
+// trigger when key releases
+// if keyboard and chip8_kb match, nothing changed, loop again
+// if any bit went from 1 to 0, put that in VX
+void CHIP8_FX0A(uint8_t X, uint16_t keyboard) {
+  for (uint8_t i = 0; i < 0xf; i++) {
+    // if a key was pressed and now its not
+    if (((chip8_kb >> i) & 0x1) > ((keyboard >> i) & 0x1)) {
+      chip8_v[X] = i;
+      return;
+    }
   }
+  chip8_pc -= 2;
 }
 void CHIP8_FX29(uint8_t X) {
   // font starts at chip8_ram[80]
@@ -335,7 +338,7 @@ uint16_t CHIP8_fetch() {
   return instruction;
 }
 
-void CHIP8_cycle(uint8_t key) {
+void CHIP8_cycle(uint16_t keyboard) {
   uint16_t instruction = CHIP8_fetch();
 
   // this is wasting work because not every instruction will use these values
@@ -424,9 +427,9 @@ void CHIP8_cycle(uint8_t key) {
       break;
     case 0xE:
       if (NN == 0x9E) {
-        CHIP8_EX9E(X, key);
+        CHIP8_EX9E(X);
       } else {
-        CHIP8_EXA1(X, key);
+        CHIP8_EXA1(X);
       }
       break;
     case 0xF:
@@ -444,7 +447,7 @@ void CHIP8_cycle(uint8_t key) {
           CHIP8_FX1E(X);
           break;
         case 0x0A:
-          CHIP8_FX0A(X, key);
+          CHIP8_FX0A(X, keyboard);
           break;
         case 0x29:
           CHIP8_FX29(X);
@@ -460,6 +463,7 @@ void CHIP8_cycle(uint8_t key) {
           break;
       }
   }
+  chip8_kb = keyboard;
 }
 
 
