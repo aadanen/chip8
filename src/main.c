@@ -18,20 +18,24 @@ int main(int argc, char** argv) {
   uint32_t pixelHeight = screenHeight/CHIP8_SCREEN_HEIGHT;
   uint32_t pixelWidth = screenWidth/CHIP8_SCREEN_WIDTH;
   uint16_t keyboard;
+  const uint32_t target_fps = 60;
+  const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
+
+
   SetTraceLogLevel(LOG_ERROR);
+
+  InitWindow(screenWidth, screenHeight, "CHIP8");
+  InitAudioDevice();
+  SetAudioStreamBufferSizeDefault(4096);
+  SetTargetFPS(target_fps); 
+
+  Sound beep = LoadSound("src/261.wav");
 
   CHIP8_initialize();
   CHIP8_load(argv[1]);
 
-  InitWindow(screenWidth, screenHeight, "CHIP8");
-  const uint32_t target_fps = 60;
-  const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
-
-  SetTargetFPS(target_fps); 
-
   // Main game loop
   while (!WindowShouldClose()) {
-    
 
     keyboard = 0;
     if (IsKeyDown(49))
@@ -77,8 +81,15 @@ int main(int argc, char** argv) {
       CHIP8_cycle(keyboard);
     }
 
+    // sound
+    if (chip8_sound > 0 && !IsSoundPlaying(beep)) {
+      PlaySound(beep);
+    }
+    if (chip8_sound == 0 && IsSoundPlaying(beep)) {
+      StopSound(beep);
+    }
+
     // Draw
-    //----------------------------------------------------------------------------------
     BeginDrawing();
 
     ClearBackground(BKGDCOLOR);
