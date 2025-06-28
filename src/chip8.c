@@ -104,12 +104,15 @@ void CHIP8_8XY0(uint8_t X, uint8_t Y) {
 }
 void CHIP8_8XY1(uint8_t X, uint8_t Y) {
   chip8_v[X] = chip8_v[X] | chip8_v[Y];
+  chip8_v[0xf] = 0;
 }
 void CHIP8_8XY2(uint8_t X, uint8_t Y) {
   chip8_v[X] = chip8_v[X] & chip8_v[Y];
+  chip8_v[0xf] = 0;
 }
 void CHIP8_8XY3(uint8_t X, uint8_t Y) {
   chip8_v[X] = chip8_v[X] ^ chip8_v[Y];
+  chip8_v[0xf] = 0;
 }
 void CHIP8_8XY4(uint8_t X, uint8_t Y) {
   if (chip8_v[Y] > 255 - chip8_v[X]) {
@@ -205,6 +208,9 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
     uint8_t row = chip8_ram[chip8_index+i];
     // for each bit in the row
     for (uint8_t j = 0; j < 8; j++) {
+      if (x + j == CHIP8_SCREEN_WIDTH) {
+        break;
+      }
       uint8_t spritebit = row & (0x80 >> j);
       uint8_t* pixel = &(chip8_screen[y + i][x + j]);
       if (spritebit && *pixel) {
@@ -215,7 +221,6 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
       }
     }
   }
-  //chip8_draw_flag = 1;
 }
 
 void CHIP8_EX9E(uint8_t X) {
@@ -273,12 +278,14 @@ void CHIP8_FX33(uint8_t X) {
 }
 void CHIP8_FX55(uint8_t X) {
   for (int i = 0; i <= X; i++) {
-    chip8_ram[chip8_index + i] = chip8_v[i];
+    chip8_ram[chip8_index] = chip8_v[i];
+    chip8_index++;
   }
 }
 void CHIP8_FX65(uint8_t X) {
   for (int i = 0; i <= X; i++) {
-    chip8_v[i] = chip8_ram[chip8_index + i];
+    chip8_v[i] = chip8_ram[chip8_index];
+    chip8_index++;
   }
 }
 
@@ -464,6 +471,15 @@ void CHIP8_cycle(uint16_t keyboard) {
       }
   }
   chip8_kb = keyboard;
+}
+
+void CHIP8_dump() {
+  uint16_t instruction = 
+    ((uint16_t)chip8_ram[chip8_pc] << 8) | (uint16_t)chip8_ram[chip8_pc+1];
+  printf("%04x\n",instruction);
+  for (uint8_t i = 0; i <= 0xf; i++) {
+    printf("V%X = %02x\n", i, chip8_v[i]);
+  }
 }
 
 

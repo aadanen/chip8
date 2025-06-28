@@ -5,6 +5,7 @@
 
 #define PIXELCOLOR RAYWHITE
 #define BKGDCOLOR BLACK
+#define SINGLE_STEP_MODE 0
 
 int main(int argc, char** argv) {
   if (argc != 2) {
@@ -19,7 +20,9 @@ int main(int argc, char** argv) {
   uint32_t pixelWidth = screenWidth/CHIP8_SCREEN_WIDTH;
   uint16_t keyboard;
   const uint32_t target_fps = 60;
+  #if !(SINGLE_STEP_MODE)
   const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
+  #endif
 
 
   SetTraceLogLevel(LOG_ERROR);
@@ -74,12 +77,21 @@ int main(int argc, char** argv) {
     if (IsKeyDown(86))
       keyboard |= 0x8000;
 
+
     // 1 frame will have roughly 11 clock cycles
     // maybe later i can run the two processes seperately
     // like one thread is the screen and another thread is the emulator
+
+    #if !(SINGLE_STEP_MODE)
     for (uint32_t i = 0; i < cycles_per_frame; i++) {
       CHIP8_cycle(keyboard);
     }
+    #else
+    if (IsKeyReleased(KEY_SPACE) || IsKeyDown(KEY_DOWN)) {
+      CHIP8_dump();
+      CHIP8_cycle(keyboard);
+    }
+    #endif
 
     // sound
     if (chip8_sound > 0 && !IsSoundPlaying(beep)) {
