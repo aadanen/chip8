@@ -24,6 +24,7 @@ int main(int argc, char** argv) {
   // for the chip8
   uint16_t keyboard = 0;
   const uint32_t target_fps = 60;
+  const uint32_t target_ticks_per_frame = 1000/target_fps;
   #if !(SINGLE_STEP_MODE)
   const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
   #endif
@@ -34,6 +35,8 @@ int main(int argc, char** argv) {
   SDL_SetAppMetadata("chip8", "1.0", "");
   SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
   SDL_Window *window;
+  int *numkeys = 0;
+
   window = SDL_CreateWindow(
       "chip8",
       screenWidth,
@@ -69,13 +72,73 @@ int main(int argc, char** argv) {
 
   // Main game loop
   bool done = false;
+  uint64_t frame_start_ticks;
+  uint64_t elapsed_ticks;
   while (!done) {
+    frame_start_ticks = SDL_GetTicks();
+    keyboard = 0;
+
     // handle system events
     SDL_Event event;
     while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT) {
+      if (event.type == SDL_EVENT_QUIT || 
+          (event.type == SDL_EVENT_KEY_DOWN && 
+           event.key.scancode == SDL_SCANCODE_ESCAPE)) {
         done = true;
       }
+    }
+    const bool *sdl_keyboard = SDL_GetKeyboardState(numkeys);
+    if (sdl_keyboard[SDL_SCANCODE_1]) {
+      keyboard |= 0x2;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_2]) {
+      keyboard |= 0x4;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_3]) {
+      keyboard |= 0x8;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_4]) {
+      keyboard |= 0x1000;
+    }
+
+
+    if (sdl_keyboard[SDL_SCANCODE_Q]) {
+      keyboard |= 0x10;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_W]) {
+      keyboard |= 0x20;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_E]) {
+      keyboard |= 0x40;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_R]) {
+      keyboard |= 0x2000;
+    }
+
+    if (sdl_keyboard[SDL_SCANCODE_A]) {
+      keyboard |= 0x80;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_S]) {
+      keyboard |= 0x100;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_D]) {
+      keyboard |= 0x200;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_F]) {
+      keyboard |= 0x4000;
+    }
+
+    if (sdl_keyboard[SDL_SCANCODE_Z]) {
+      keyboard |= 0x400;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_X]) {
+      keyboard |= 0x1;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_C]) {
+      keyboard |= 0x800;
+    }
+    if (sdl_keyboard[SDL_SCANCODE_V]) {
+      keyboard |= 0x8000;
     }
 
     #if !(SINGLE_STEP_MODE)
@@ -116,6 +179,10 @@ int main(int argc, char** argv) {
     }
     if (chip8_delay > 0) {
       chip8_delay--;
+    }
+    elapsed_ticks = SDL_GetTicks() - frame_start_ticks;
+    if (elapsed_ticks < target_ticks_per_frame) {
+      SDL_Delay(target_ticks_per_frame - elapsed_ticks);
     }
   }
   SDL_Quit();
