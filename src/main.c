@@ -8,7 +8,26 @@
 #include <chip8.h>
 
 #define SINGLE_STEP_MODE 0
-#define FADE_CONSTANT 100.0f
+
+
+void audio_linear_fade_in(float* samples, uint32_t nsamples, 
+    float fade_length) {
+  if (fade_length > nsamples) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Fade in length > num samples\n");
+  }
+  for (uint32_t i = 0; i < fade_length; i++) {
+    samples[i] *= (i/fade_length);
+  }
+}
+void audio_linear_fade_out(float* samples, uint32_t nsamples, 
+    float fade_length) {
+  if (fade_length > nsamples) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Fade out length > num samples\n");
+  }
+  for (uint32_t i = nsamples - fade_length - 1; i < nsamples; i++) {
+    samples[i] *= (nsamples - i - 1)/fade_length;
+  }
+}
 
 int main(int argc, char** argv) {
   if (argc != 2) {
@@ -78,7 +97,7 @@ int main(int argc, char** argv) {
   // constant sample rate
   // float32 data
   spec.channels = 1;
-  spec.freq = 8000;
+  spec.freq = 16000;
   spec.format = SDL_AUDIO_F32;
   //const float silence_value = SDL_GetSilenceValueForFormat(SDL_AUDIO_F32);
   SDL_AudioStream *stream = NULL;
@@ -179,16 +198,17 @@ int main(int argc, char** argv) {
 
       for (uint64_t i = 0; i < needed_samples; i++) {
           const int freq = 260;
-          const float phase = cur_sample * freq / 8000.0f;
+          const float phase = cur_sample * freq / 16000.0f;
           samples[i] = SDL_sinf(phase * 2 * SDL_PI_F);
-          if (i < FADE_CONSTANT) {
-            samples[i] *= (i/FADE_CONSTANT);
-          }
-          if (needed_samples - i < FADE_CONSTANT) {
-            samples[i] *= (needed_samples - i)/FADE_CONSTANT;
-          }
           cur_sample++;
-          cur_sample %= 8000;
+          cur_sample %= 16000;
+      }
+      if (needed_samples >= 800) {
+        audio_linear_fade_in(samples, needed_samples, 100.0f);
+        audio_linear_fade_out(samples, needed_samples, 700.0f);
+      } else {
+        audio_linear_fade_in(samples, needed_samples, needed_samples/8.0f);
+        audio_linear_fade_out(samples, needed_samples, needed_samples * (7.0f/8.0f));
       }
 
       SDL_PutAudioStreamData(stream, samples, (needed_samples)*sizeof(float));
