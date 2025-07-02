@@ -94,7 +94,6 @@ int main(int argc, char** argv) {
   bool playing_audio = false;
   uint64_t frame_start_ticks;
   uint64_t elapsed_ticks;
-  chip8_sound = 60;
   while (!done) {
     frame_start_ticks = SDL_GetTicks();
     keyboard = 0;
@@ -186,7 +185,7 @@ int main(int argc, char** argv) {
             samples[i] *= (i/FADE_CONSTANT);
           }
           if (needed_samples - i < FADE_CONSTANT) {
-            samples[i] *= 1 - (needed_samples - i - FADE_CONSTANT/FADE_CONSTANT);FADE_CONSTANT);
+            samples[i] *= (needed_samples - i)/FADE_CONSTANT;
           }
           cur_sample++;
           cur_sample %= 8000;
