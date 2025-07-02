@@ -8,6 +8,7 @@
 #include <chip8.h>
 
 #define SINGLE_STEP_MODE 0
+#define FADE_CONSTANT 100.0f
 
 int main(int argc, char** argv) {
   if (argc != 2) {
@@ -34,8 +35,9 @@ int main(int argc, char** argv) {
   // for sdl
   SDL_SetAppMetadata("chip8", "1.0", "");
   SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-  SDL_Window *window;
   int *numkeys = 0;
+  SDL_Window *window;
+
 
   window = SDL_CreateWindow(
       "chip8",
@@ -49,6 +51,7 @@ int main(int argc, char** argv) {
     return 1;
   }
 
+
   SDL_Renderer *renderer;
   renderer = SDL_CreateRenderer(window, NULL);
   if (renderer == NULL) {
@@ -56,13 +59,11 @@ int main(int argc, char** argv) {
          SDL_GetError());
     return 1;
   }
-
   SDL_FRect bkgd;
   bkgd.x = 0;
   bkgd.y = 0;
   bkgd.w = screenWidth;
   bkgd.h = screenHeight;
-
   SDL_FRect chip8_pixel;
   chip8_pixel.x = 0;
   chip8_pixel.y = 0;
@@ -70,10 +71,30 @@ int main(int argc, char** argv) {
   chip8_pixel.h = pixelHeight;
 
 
+  SDL_AudioSpec spec;
+  
+  // beep is: 
+  // mono
+  // constant sample rate
+  // float32 data
+  spec.channels = 1;
+  spec.freq = 8000;
+  spec.format = SDL_AUDIO_F32;
+  //const float silence_value = SDL_GetSilenceValueForFormat(SDL_AUDIO_F32);
+  SDL_AudioStream *stream = NULL;
+  static float samples[40000] = {0};
+
+  stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, 
+      &spec, NULL, NULL);
+  SDL_ResumeAudioStreamDevice(stream);
+
+
   // Main game loop
   bool done = false;
+  bool playing_audio = false;
   uint64_t frame_start_ticks;
   uint64_t elapsed_ticks;
+  chip8_sound = 60;
   while (!done) {
     frame_start_ticks = SDL_GetTicks();
     keyboard = 0;
@@ -152,6 +173,34 @@ int main(int argc, char** argv) {
     }
     #endif
 
+    // audio
+    if (chip8_sound > 0 && !playing_audio) {
+      uint32_t needed_samples = (chip8_sound/(float)target_fps)*spec.freq;
+      uint32_t cur_sample = 0;
+
+      for (uint64_t i = 0; i < needed_samples; i++) {
+          const int freq = 260;
+          const float phase = cur_sample * freq / 8000.0f;
+          samples[i] = SDL_sinf(phase * 2 * SDL_PI_F);
+          if (i < FADE_CONSTANT) {
+            samples[i] *= (i/FADE_CONSTANT);
+          }
+          if (needed_samples - i < FADE_CONSTANT) {
+            samples[i] *= 1 - (needed_samples - i - FADE_CONSTANT/FADE_CONSTANT);FADE_CONSTANT);
+          }
+          cur_sample++;
+          cur_sample %= 8000;
+      }
+
+      SDL_PutAudioStreamData(stream, samples, (needed_samples)*sizeof(float));
+      playing_audio = true;
+    } 
+    if (chip8_sound == 0) {
+      playing_audio = false;
+    }
+
+
+    
     // graphics
     SDL_RenderClear(renderer);
     SDL_SetRenderDrawColor(renderer, 0, 0, 0, SDL_ALPHA_OPAQUE);
