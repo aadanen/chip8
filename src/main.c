@@ -104,8 +104,17 @@ int main(int argc, char** argv) {
   SDL_AudioStream *stream = NULL;
   static float samples[40000] = {0};
 
+  /*
   stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, 
       &spec, NULL, NULL);
+      */
+  SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(
+      SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
+
+  SDL_AudioSpec device_spec;
+  SDL_GetAudioDeviceFormat(audio_device, &device_spec, NULL);
+  stream = SDL_CreateAudioStream(&spec, &device_spec);
+  SDL_BindAudioStream(audio_device, stream);
   SDL_ResumeAudioStreamDevice(stream);
 
 
