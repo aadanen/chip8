@@ -8,6 +8,7 @@
 #include <chip8.h>
 
 #define SINGLE_STEP_MODE 0
+#define GAPS 1
 
 
 void audio_linear_fade_in(float* samples, uint32_t nsamples, 
@@ -86,8 +87,8 @@ int main(int argc, char** argv) {
   SDL_FRect chip8_pixel;
   chip8_pixel.x = 0;
   chip8_pixel.y = 0;
-  chip8_pixel.w = pixelWidth;
-  chip8_pixel.h = pixelHeight;
+  chip8_pixel.w = pixelWidth - 2*GAPS;
+  chip8_pixel.h = pixelHeight - 2*GAPS;
 
 
   SDL_AudioSpec spec;
@@ -226,11 +227,13 @@ int main(int argc, char** argv) {
     SDL_RenderFillRect(renderer, &bkgd);
 
 
-    SDL_SetRenderDrawColor(renderer, 255, 255, 255, SDL_ALPHA_OPAQUE);
+    SDL_SetRenderDrawColor(renderer, 0, 255, 51, SDL_ALPHA_OPAQUE);
     for (uint8_t i = 0; i < CHIP8_SCREEN_HEIGHT; i++) {
       for (uint8_t j = 0; j < CHIP8_SCREEN_WIDTH; j++) {
-        chip8_pixel.y = i*pixelHeight;
-        chip8_pixel.x = j*pixelWidth;
+        chip8_pixel.y = i*(pixelHeight)+GAPS;
+        chip8_pixel.x = j*(pixelWidth)+GAPS;
+
+        //SDL_SetRenderDrawColor(renderer, R, G, B, SDL_ALPHA_OPAQUE);
         if (chip8_screen[i][j]) {
           SDL_RenderFillRect(renderer, &chip8_pixel);
         }
