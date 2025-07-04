@@ -1,6 +1,7 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <stdbool.h>
+#include <string.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
@@ -9,8 +10,16 @@
 
 #define SINGLE_STEP_MODE 0
 #define GAPS 1
+const char* CONFIG_NAME = "chip8.conf";
 
 
+void read_config() {
+  const char* basepath = SDL_GetBasePath();
+  uint32_t baselen = SDL_strlen(basepath);
+  char* confpath = (char*)SDL_malloc(baselen*sizeof(char));
+  SDL_memcpy(confpath, basepath, (baselen-6)*sizeof(char));
+  printf("%s\n", confpath);
+}
 void audio_linear_fade_in(float* samples, uint32_t nsamples, 
     float fade_length) {
   if (fade_length > nsamples) {
@@ -35,17 +44,18 @@ int main(int argc, char** argv) {
     printf("Bad arguments\n");
     return 1;
   }
+  //read_config();
 
   // Initialization
-  uint32_t screenWidth = 1600;
-  uint32_t screenHeight = 800;
+  uint32_t screenWidth = 1000;
+  uint32_t screenHeight = 500;
   uint32_t pixelHeight = screenHeight/CHIP8_SCREEN_HEIGHT;
   uint32_t pixelWidth = screenWidth/CHIP8_SCREEN_WIDTH;
 
   // for the chip8
   uint16_t keyboard = 0;
-  const uint32_t target_fps = 60;
-  const uint32_t target_ticks_per_frame = 1000/target_fps;
+  uint32_t target_fps = 60;
+  uint32_t target_ticks_per_frame = 1000/target_fps;
   #if !(SINGLE_STEP_MODE)
   const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
   #endif
@@ -56,14 +66,13 @@ int main(int argc, char** argv) {
   SDL_SetAppMetadata("chip8", "1.0", "");
   SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
   int *numkeys = 0;
+
   SDL_Window *window;
-
-
   window = SDL_CreateWindow(
       "chip8",
       screenWidth,
       screenHeight,
-      0
+      SDL_WINDOW_INPUT_FOCUS 
       );
   if (window == NULL) {
     SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create window: %s\n", 
@@ -123,6 +132,7 @@ int main(int argc, char** argv) {
   bool playing_audio = false;
   uint64_t frame_start_ticks;
   uint64_t elapsed_ticks;
+
   while (!done) {
     frame_start_ticks = SDL_GetTicks();
     keyboard = 0;
@@ -214,6 +224,7 @@ int main(int argc, char** argv) {
           cur_sample %= 16000;
       }
       if (needed_samples >= 800) {
+
         audio_linear_fade_in(samples, needed_samples, 100.0f);
         audio_linear_fade_out(samples, needed_samples, 700.0f);
       } else {
