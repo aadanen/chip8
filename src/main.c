@@ -2,24 +2,71 @@
 #include <stdio.h>
 #include <stdbool.h>
 #include <string.h>
+#include <stdlib.h>
 
 #include <SDL3/SDL.h>
 #include <SDL3/SDL_main.h>
+
+#include <iniparser.h>
 
 #include <chip8.h>
 
 #define SINGLE_STEP_MODE 0
 #define GAPS 1
-const char* CONFIG_NAME = "chip8.conf";
 
+const char* config_name = "chip8_config.ini";
+uint8_t quirks[CHIP8_NUM_QUIRKS] = {0};
 
-void read_config() {
+typedef struct chip8_settings {
+  uint32_t screen_width;
+  uint32_t screen_height;
+  uint32_t target_fps;
+  uint32_t chip8_clock_speed;
+
+} chip8_settings;
+
+bool read_config(chip8_settings* settings) {
   const char* basepath = SDL_GetBasePath();
-  uint32_t baselen = SDL_strlen(basepath);
-  char* confpath = (char*)SDL_malloc(baselen*sizeof(char));
-  SDL_memcpy(confpath, basepath, (baselen-6)*sizeof(char));
-  printf("%s\n", confpath);
+  uint32_t len = SDL_strlen(basepath) + SDL_strlen(config_name);
+  char* confpath = (char*)SDL_malloc(len);
+  SDL_memcpy(confpath, basepath, (SDL_strlen(basepath)-6));
+  SDL_strlcat(confpath, config_name, len);
+
+  dictionary* ini = iniparser_load(confpath);
+  settings->screen_width = iniparser_getint(ini, "sdl:screen_width", -1);
+  settings->screen_height = iniparser_getint(ini, "sdl:screen_height", -1);
+  settings->target_fps = iniparser_getint(ini, "sdl:target_fps", -1);
+  settings->chip8_clock_speed = iniparser_getint(ini, 
+      "chip8:chip8_clock_speed", -1);
+
+  // parse quirks
+  enum CHIP8_QUIRK_INDEX index;
+  index = SHIFT;
+  quirks[index] = iniparser_getint(ini, "chip8:shift", -1);
+
+  index = MEM_INCREMENT_X;
+  quirks[index] = iniparser_getint(ini, "chip8:mem_increment_x:", -1);
+
+  index = MEM_I_UNCHANGED;
+  quirks[index] = iniparser_getint(ini, "chip8:mem_i_unchanged", -1);
+
+  index = WRAP;
+  quirks[index] = iniparser_getint(ini, "chip8:wrap", -1);
+
+  index = JUMP;
+  quirks[index] = iniparser_getint(ini, "chip8:jump", -1);
+
+  index = VBLANK;
+  quirks[index] = iniparser_getint(ini, "chip8:vblank", -1);
+
+  index = VF_RESET;
+  quirks[index] = iniparser_getint(ini, "chip8:vf_reset", -1);
+  
+  iniparser_freedict(ini);
+  SDL_free(confpath);
+  return true;
 }
+
 void audio_linear_fade_in(float* samples, uint32_t nsamples, 
     float fade_length) {
   if (fade_length > nsamples) {
@@ -39,114 +86,8 @@ void audio_linear_fade_out(float* samples, uint32_t nsamples,
   }
 }
 
-int main(int argc, char** argv) {
-  if (argc != 2) {
-    printf("Bad arguments\n");
-    return 1;
-  }
-  //read_config();
-
-  // Initialization
-  uint32_t screenWidth = 1000;
-  uint32_t screenHeight = 500;
-  uint32_t pixelHeight = screenHeight/CHIP8_SCREEN_HEIGHT;
-  uint32_t pixelWidth = screenWidth/CHIP8_SCREEN_WIDTH;
-
-  // for the chip8
-  uint16_t keyboard = 0;
-  uint32_t target_fps = 60;
-  uint32_t target_ticks_per_frame = 1000/target_fps;
-  #if !(SINGLE_STEP_MODE)
-  const uint32_t cycles_per_frame = CHIP8_CLOCK_SPEED/target_fps;
-  #endif
-  CHIP8_initialize();
-  CHIP8_load(argv[1]);
-
-  // for sdl
-  SDL_SetAppMetadata("chip8", "1.0", "");
-  SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
-  int *numkeys = 0;
-
-  SDL_Window *window;
-  window = SDL_CreateWindow(
-      "chip8",
-      screenWidth,
-      screenHeight,
-      SDL_WINDOW_INPUT_FOCUS 
-      );
-  if (window == NULL) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create window: %s\n", 
-         SDL_GetError());
-    return 1;
-  }
-
-
-  SDL_Renderer *renderer;
-  renderer = SDL_CreateRenderer(window, NULL);
-  if (renderer == NULL) {
-    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create renderer: %s\n", 
-         SDL_GetError());
-    return 1;
-  }
-  SDL_FRect bkgd;
-  bkgd.x = 0;
-  bkgd.y = 0;
-  bkgd.w = screenWidth;
-  bkgd.h = screenHeight;
-  SDL_FRect chip8_pixel;
-  chip8_pixel.x = 0;
-  chip8_pixel.y = 0;
-  chip8_pixel.w = pixelWidth - 2*GAPS;
-  chip8_pixel.h = pixelHeight - 2*GAPS;
-
-
-  SDL_AudioSpec spec;
-  
-  // beep is: 
-  // mono
-  // constant sample rate
-  // float32 data
-  spec.channels = 1;
-  spec.freq = 16000;
-  spec.format = SDL_AUDIO_F32;
-  //const float silence_value = SDL_GetSilenceValueForFormat(SDL_AUDIO_F32);
-  SDL_AudioStream *stream = NULL;
-  static float samples[40000] = {0};
-
-  /*
-  stream = SDL_OpenAudioDeviceStream(SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, 
-      &spec, NULL, NULL);
-      */
-  SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(
-      SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
-
-  SDL_AudioSpec device_spec;
-  SDL_GetAudioDeviceFormat(audio_device, &device_spec, NULL);
-  stream = SDL_CreateAudioStream(&spec, &device_spec);
-  SDL_BindAudioStream(audio_device, stream);
-  SDL_ResumeAudioStreamDevice(stream);
-
-
-  // Main game loop
-  bool done = false;
-  bool playing_audio = false;
-  uint64_t frame_start_ticks;
-  uint64_t elapsed_ticks;
-
-  while (!done) {
-    frame_start_ticks = SDL_GetTicks();
-    keyboard = 0;
-
-    // handle system events
-    SDL_Event event;
-    while (SDL_PollEvent(&event)) {
-      if (event.type == SDL_EVENT_QUIT || 
-          (event.type == SDL_EVENT_KEY_DOWN && 
-           event.key.scancode == SDL_SCANCODE_ESCAPE)) {
-        done = true;
-      }
-    }
-    const bool *sdl_keyboard = SDL_GetKeyboardState(numkeys);
+uint16_t get_keypad(const bool* sdl_keyboard) {
+    uint16_t keyboard = 0;
     if (sdl_keyboard[SDL_SCANCODE_1]) {
       keyboard |= 0x2;
     }
@@ -199,10 +140,115 @@ int main(int argc, char** argv) {
     if (sdl_keyboard[SDL_SCANCODE_V]) {
       keyboard |= 0x8000;
     }
+    return keyboard;
+}
+
+int main(int argc, char** argv) {
+  if (argc != 2) {
+    printf("Bad arguments\n");
+    return 1;
+  }
+  chip8_settings* settings = (chip8_settings*)SDL_malloc(sizeof(*settings));
+  if (!read_config(settings)) {
+    return 1;
+  }
+
+  uint32_t pixelHeight = settings->screen_height/CHIP8_SCREEN_HEIGHT;
+  uint32_t pixelWidth = settings->screen_width/CHIP8_SCREEN_WIDTH;
+
+  // Initialization
+
+  // for the chip8
+  uint16_t keyboard = 0;
+  uint32_t target_ticks_per_frame = 1000/settings->target_fps;
+  #if !(SINGLE_STEP_MODE)
+  const uint32_t cycles_per_frame = 
+    settings->chip8_clock_speed/settings->target_fps;
+  #endif
+  CHIP8_initialize(quirks);
+  CHIP8_load(argv[1]);
+
+  // for sdl
+  SDL_SetAppMetadata("chip8", "1.0", "");
+  SDL_Init(SDL_INIT_AUDIO | SDL_INIT_VIDEO | SDL_INIT_EVENTS);
+  int *numkeys = 0;
+
+  SDL_Window *window;
+  window = SDL_CreateWindow(
+      "chip8",
+      settings->screen_width,
+      settings->screen_height,
+      SDL_WINDOW_INPUT_FOCUS 
+      );
+  if (window == NULL) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create window: %s\n", 
+         SDL_GetError());
+    return 1;
+  }
+
+
+  SDL_Renderer *renderer;
+  renderer = SDL_CreateRenderer(window, NULL);
+  if (renderer == NULL) {
+    SDL_LogError(SDL_LOG_CATEGORY_ERROR, "Could not create renderer: %s\n", 
+         SDL_GetError());
+    return 1;
+  }
+  SDL_FRect bkgd;
+  bkgd.x = 0;
+  bkgd.y = 0;
+  bkgd.w = settings->screen_width;
+  bkgd.h = settings->screen_height;
+  SDL_FRect chip8_pixel;
+  chip8_pixel.x = 0;
+  chip8_pixel.y = 0;
+  chip8_pixel.w = pixelWidth - 2*GAPS;
+  chip8_pixel.h = pixelHeight - 2*GAPS;
+
+
+  SDL_AudioSpec spec;
+  
+  spec.channels = 1;
+  spec.freq = 16000;
+  spec.format = SDL_AUDIO_F32;
+  SDL_AudioStream *stream = NULL;
+  static float samples[40000] = {0};
+
+  SDL_AudioDeviceID audio_device = SDL_OpenAudioDevice(
+      SDL_AUDIO_DEVICE_DEFAULT_PLAYBACK, &spec);
+
+  SDL_AudioSpec device_spec;
+  SDL_GetAudioDeviceFormat(audio_device, &device_spec, NULL);
+  stream = SDL_CreateAudioStream(&spec, &device_spec);
+  SDL_BindAudioStream(audio_device, stream);
+  SDL_ResumeAudioStreamDevice(stream);
+
+
+  // Main game loop
+  bool done = false;
+  bool playing_audio = false;
+  uint64_t frame_start_ticks;
+  uint64_t elapsed_ticks;
+
+  while (!done) {
+    frame_start_ticks = SDL_GetTicks();
+    keyboard = 0;
+
+    // handle system events
+    SDL_Event event;
+    while (SDL_PollEvent(&event)) {
+      if (event.type == SDL_EVENT_QUIT || 
+          (event.type == SDL_EVENT_KEY_DOWN && 
+           event.key.scancode == SDL_SCANCODE_ESCAPE)) {
+        done = true;
+      }
+    }
+    const bool *sdl_keyboard = SDL_GetKeyboardState(numkeys);
+    keyboard = get_keypad(sdl_keyboard);
 
     #if !(SINGLE_STEP_MODE)
     for (uint32_t i = 0; i < cycles_per_frame; i++) {
-      CHIP8_cycle(keyboard);
+      CHIP8_cycle(keyboard, i);
     }
     #else
     if (1) {
@@ -213,7 +259,7 @@ int main(int argc, char** argv) {
 
     // audio
     if (chip8_sound > 0 && !playing_audio) {
-      uint32_t needed_samples = (chip8_sound/(float)target_fps)*spec.freq;
+      uint32_t needed_samples = (chip8_sound/(float)settings->target_fps)*spec.freq;
       uint32_t cur_sample = 0;
 
       for (uint64_t i = 0; i < needed_samples; i++) {

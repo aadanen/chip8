@@ -19,6 +19,9 @@ uint8_t chip8_draw_flag = 0;
 uint16_t chip8_stack[CHIP8_STACK_DEPTH];
 uint8_t chip8_stack_top = 0;
 
+// quirks
+uint8_t chip8_quirks[7];
+enum CHIP8_QUIRK_INDEX quirk_index;
 
 uint8_t FONT_DATA[5*16] = {
   0xF0, 0x90, 0x90, 0x90, 0xF0, // 0
@@ -134,7 +137,8 @@ void CHIP8_8XY5(uint8_t X, uint8_t Y) {
 }
 
 void CHIP8_8XY6(uint8_t X, uint8_t Y) {
-  if (CHIP8_OLD_SHIFT) {
+  quirk_index = SHIFT;
+  if (!chip8_quirks[quirk_index]) {
     chip8_v[X] = chip8_v[Y];
   }
   if (chip8_v[X] & 0x1) {
@@ -155,7 +159,8 @@ void CHIP8_8XY7(uint8_t X, uint8_t Y) {
   }
 }
 void CHIP8_8XYE(uint8_t X, uint8_t Y) {
-  if (CHIP8_OLD_SHIFT) {
+  quirk_index = SHIFT;
+  if (!chip8_quirks[quirk_index]) {
     chip8_v[X] = chip8_v[Y];
   }
   if (chip8_v[X] & 0x80) {
@@ -181,10 +186,11 @@ void CHIP8_ANNN(uint16_t NNN) {
 }
 
 void CHIP8_BNNN(uint8_t X, uint16_t NNN) {
-  if (CHIP8_OLD_JUMP_OFFSET) {
-    chip8_pc = chip8_v[0]+NNN;
-  } else {
+  quirk_index = JUMP;
+  if (chip8_quirks[quirk_index]) {
     chip8_pc = chip8_v[X]+NNN;
+  } else {
+    chip8_pc = chip8_v[0]+NNN;
   }
 }
 
@@ -198,6 +204,7 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
   uint8_t x = chip8_v[X] % CHIP8_SCREEN_WIDTH;
   uint8_t y = chip8_v[Y] % CHIP8_SCREEN_HEIGHT;
   chip8_v[0xf] = 0;
+  quirk_index = WRAP;
 
   // for N rows
   for (uint8_t i = 0; i < N; i++) {
@@ -208,11 +215,11 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
     uint8_t row = chip8_ram[chip8_index+i];
     // for each bit in the row
     for (uint8_t j = 0; j < 8; j++) {
-      if (x + j == CHIP8_SCREEN_WIDTH) {
+      if (!chip8_quirks[quirk_index] && (x + j == CHIP8_SCREEN_WIDTH)) {
         break;
       }
       uint8_t spritebit = row & (0x80 >> j);
-      uint8_t* pixel = &(chip8_screen[y + i][x + j]);
+      uint8_t* pixel = &(chip8_screen[y + i][(x + j) % CHIP8_SCREEN_WIDTH]);
       if (spritebit && *pixel) {
         *pixel = 0;
         chip8_v[0xf] = 1;
@@ -277,9 +284,20 @@ void CHIP8_FX33(uint8_t X) {
   chip8_ram[chip8_index+2] = chip8_v[X] % 10;
 }
 void CHIP8_FX55(uint8_t X) {
-  for (int i = 0; i <= X; i++) {
-    chip8_ram[chip8_index] = chip8_v[i];
-    chip8_index++;
+  quirk_index = MEM_I_UNCHANGED;
+  if (!chip8_quirks[MEM_I_UNCHANGED]) {
+    for (int i = 0; i <= X; i++) {
+      chip8_ram[chip8_index] = chip8_v[i];
+      chip8_index++;
+    }
+    quirk_index = MEM_INCREMENT_X;
+    if (chip8_quirks[quirk_index]) {
+      chip8_index--;
+    }
+  } else {
+    for (int i = 0; i <= X; i++) {
+      chip8_ram[chip8_index] = chip8_v[i];
+    }
   }
 }
 void CHIP8_FX65(uint8_t X) {
@@ -287,13 +305,17 @@ void CHIP8_FX65(uint8_t X) {
     chip8_v[i] = chip8_ram[chip8_index];
     chip8_index++;
   }
+  if (chip8_quirks[quirk_index]) {
+    chip8_index--;
+  }
 }
 
 // set up the CHIP8
 // * loads font into RAM
-void CHIP8_initialize() {
+void CHIP8_initialize(uint8_t* quirks) {
   // load the font into memory
   memcpy(chip8_ram+80, FONT_DATA, 5*16*sizeof(uint8_t));
+  memcpy(chip8_quirks, quirks, CHIP8_NUM_QUIRKS);
   srand(time(NULL));
 }
 
@@ -345,7 +367,7 @@ uint16_t CHIP8_fetch() {
   return instruction;
 }
 
-void CHIP8_cycle(uint16_t keyboard) {
+void CHIP8_cycle(uint16_t keyboard, uint8_t ipf) {
   uint16_t instruction = CHIP8_fetch();
 
   // this is wasting work because not every instruction will use these values
@@ -430,7 +452,18 @@ void CHIP8_cycle(uint16_t keyboard) {
       CHIP8_CXNN(X, NN);
       break;
     case 0xD:
-      CHIP8_DXYN(X, Y, N);
+      quirk_index = VBLANK;
+      if (chip8_quirks[quirk_index]) {
+        if (ipf == 0) {
+          CHIP8_DXYN(X, Y, N);
+        } else {
+          // no-op and wait for vblank
+          chip8_pc -= 2;
+        }
+        
+      } else {
+        CHIP8_DXYN(X, Y, N);
+      }
       break;
     case 0xE:
       if (NN == 0x9E) {
