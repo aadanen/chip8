@@ -12,3 +12,6 @@ The chip8 community, as well as the wider EmuDev community is fantastic. There a
 [https://tobiasvl.github.io/blog/write-a-chip-8-emulator/](https://tobiasvl.github.io/blog/write-a-chip-8-emulator/)  
 [http://devernay.free.fr/hacks/chip8/C8TECH10.HTM](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)  
 [https://github.com/Timendus/chip8-test-suite](https://github.com/Timendus/chip8-test-suite)  
+
+## libraries
+I used some fantastic libraries. credits to [SDL3](https://wiki.libsdl.org/SDL3/FrontPage) and [Inih](https://github.com/benhoyt/inih)
