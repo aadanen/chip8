@@ -8,6 +8,8 @@
 #include <SDL3/SDL_main.h>
 
 #include <iniparser.h>
+#include <sha1.h>
+#include <cjson.h>
 
 #include <chip8.h>
 
@@ -21,6 +23,42 @@ const char* config_name = "chip8_config.ini";
 // option: force config quirks
 // option: try database and exit on fail
 uint8_t quirks[CHIP8_NUM_QUIRKS] = {0};
+
+char* calc_sha1(char* rom_path) {
+  FILE *f;
+  int i, j;
+  char* output = (char*)malloc(41);
+  sha1_context ctx;
+  unsigned char buf[1000];
+  unsigned char sha1sum[20];
+
+  if (!(f = fopen(rom_path, "rb"))) {
+    return NULL;
+  }
+  sha1_starts(&ctx);
+  while((i = fread(buf, 1, sizeof(buf), f)) > 0) {
+    sha1_update(&ctx, buf, i);
+  }
+  sha1_finish(&ctx, sha1sum);
+  
+  for (j = 0; j < 20; j++) {
+    sprintf(output+j*2, "%02x", sha1sum[j]);
+  }
+  return output;
+}
+
+bool query_database(char* rom_path) {
+  // Calculate the SHA1 hash of a ROM file
+  char* sha1 = calc_sha1(rom_path);
+  printf("%s\n",sha1);
+
+  // Look up the SHA1 hash in sha1-hashes.json, which gives you an index
+  // Use the index to find the program metadata in the programs.json file
+  // Find the ROM metadata in the roms list of the program metadata
+  // Configure your interpreter to run the ROM using platforms.json and quirks.json
+  return true;
+}
+
 
 typedef struct chip8_settings {
   uint32_t screen_width;
@@ -162,6 +200,8 @@ int main(int argc, char** argv) {
   uint32_t pixelWidth = settings->screen_width/CHIP8_SCREEN_WIDTH;
 
   // Initialization
+  query_database(argv[1]);
+  return 0;
 
   // for the chip8
   uint16_t keyboard = 0;
