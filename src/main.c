@@ -15,6 +15,11 @@
 #define GAPS 1
 
 const char* config_name = "chip8_config.ini";
+
+// lets try this
+// default: try a database lookup, then switch to the config 
+// option: force config quirks
+// option: try database and exit on fail
 uint8_t quirks[CHIP8_NUM_QUIRKS] = {0};
 
 typedef struct chip8_settings {
