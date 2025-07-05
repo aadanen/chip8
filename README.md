@@ -2,14 +2,15 @@
 My take on a CHIP-8 Interpreter. This is a practice project to dip my toes into emulator development.
 
 ## building
-Get yourself a copy of the dependencies
+Get yourself a copy of the dependencies (which all use cmake)
 ```
 mkdir vendored
 cd vendored
 git clone https://github.com/libsdl-org/SDL.git
 git clone https://gitlab.com/iniparser/iniparser.git
+git clone https://github.com/DaveGamble/cJSON.git
 ```
-Use cmake
+Use my top level CMakeLists.txt
 ```
 mkdir build
 cd build
@@ -21,5 +22,5 @@ The chip8 community, as well as the wider EmuDev community is fantastic. There a
 [http://devernay.free.fr/hacks/chip8/C8TECH10.HTM](http://devernay.free.fr/hacks/chip8/C8TECH10.HTM)  
 [https://github.com/Timendus/chip8-test-suite](https://github.com/Timendus/chip8-test-suite)  
 
-## libraries
-I used some fantastic libraries. credits to [SDL3](https://wiki.libsdl.org/SDL3/FrontPage) and [iniparser](https://gitlab.com/iniparser/iniparser)
+## credits
+this project was greatly assisted by all the open source libraries and code I used and all the help from the people in the emulator development discord. I really appreciate it and I will see what I can do to give back
