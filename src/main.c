@@ -9,7 +9,7 @@
 
 #include <iniparser.h>
 #include <sha1.h>
-#include <cjson.h>
+#include <cJSON.h>
 
 #include <chip8.h>
 
@@ -83,27 +83,19 @@ bool read_config(chip8_settings* settings) {
       "chip8:chip8_clock_speed", -1);
 
   // parse quirks
-  enum CHIP8_QUIRK_INDEX index;
-  index = SHIFT;
-  quirks[index] = iniparser_getint(ini, "chip8:shift", -1);
+  quirks[SHIFT] = iniparser_getint(ini, "chip8:shift", -1);
 
-  index = MEM_INCREMENT_X;
-  quirks[index] = iniparser_getint(ini, "chip8:mem_increment_x:", -1);
+  quirks[MEM_INCREMENT_X] = iniparser_getint(ini, "chip8:mem_increment_x:", -1);
 
-  index = MEM_I_UNCHANGED;
-  quirks[index] = iniparser_getint(ini, "chip8:mem_i_unchanged", -1);
+  quirks[MEM_I_UNCHANGED] = iniparser_getint(ini, "chip8:mem_i_unchanged", -1);
 
-  index = WRAP;
-  quirks[index] = iniparser_getint(ini, "chip8:wrap", -1);
+  quirks[WRAP] = iniparser_getint(ini, "chip8:wrap", -1);
 
-  index = JUMP;
-  quirks[index] = iniparser_getint(ini, "chip8:jump", -1);
+  quirks[JUMP] = iniparser_getint(ini, "chip8:jump", -1);
 
-  index = VBLANK;
-  quirks[index] = iniparser_getint(ini, "chip8:vblank", -1);
+  quirks[VBLANK] = iniparser_getint(ini, "chip8:vblank", -1);
 
-  index = VF_RESET;
-  quirks[index] = iniparser_getint(ini, "chip8:vf_reset", -1);
+  quirks[VF_RESET] = iniparser_getint(ini, "chip8:vf_reset", -1);
   
   iniparser_freedict(ini);
   SDL_free(confpath);
@@ -200,8 +192,8 @@ int main(int argc, char** argv) {
   uint32_t pixelWidth = settings->screen_width/CHIP8_SCREEN_WIDTH;
 
   // Initialization
-  query_database(argv[1]);
-  return 0;
+  /*query_database(argv[1]);
+  return 0;*/
 
   // for the chip8
   uint16_t keyboard = 0;
