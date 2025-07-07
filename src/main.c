@@ -83,19 +83,19 @@ bool read_config(chip8_settings* settings) {
       "chip8:chip8_clock_speed", -1);
 
   // parse quirks
-  quirks[SHIFT] = iniparser_getint(ini, "chip8:shift", -1);
+  quirks[CHIP8_SHIFT] = iniparser_getint(ini, "chip8:shift", -1);
 
-  quirks[MEM_INCREMENT_X] = iniparser_getint(ini, "chip8:mem_increment_x:", -1);
+  quirks[CHIP8_MEM_INCREMENT_X] = iniparser_getint(ini, "chip8:mem_increment_x:", -1);
 
-  quirks[MEM_I_UNCHANGED] = iniparser_getint(ini, "chip8:mem_i_unchanged", -1);
+  quirks[CHIP8_MEM_I_UNCHANGED] = iniparser_getint(ini, "chip8:mem_i_unchanged", -1);
 
-  quirks[WRAP] = iniparser_getint(ini, "chip8:wrap", -1);
+  quirks[CHIP8_WRAP] = iniparser_getint(ini, "chip8:wrap", -1);
 
-  quirks[JUMP] = iniparser_getint(ini, "chip8:jump", -1);
+  quirks[CHIP8_JUMP] = iniparser_getint(ini, "chip8:jump", -1);
 
-  quirks[VBLANK] = iniparser_getint(ini, "chip8:vblank", -1);
+  quirks[CHIP8_VBLANK] = iniparser_getint(ini, "chip8:vblank", -1);
 
-  quirks[VF_RESET] = iniparser_getint(ini, "chip8:vf_reset", -1);
+  quirks[CHIP8_VF_RESET] = iniparser_getint(ini, "chip8:vf_reset", -1);
   
   iniparser_freedict(ini);
   SDL_free(confpath);

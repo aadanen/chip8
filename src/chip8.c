@@ -106,15 +106,15 @@ void CHIP8_8XY0(uint8_t X, uint8_t Y) {
 }
 void CHIP8_8XY1(uint8_t X, uint8_t Y) {
   chip8_v[X] = chip8_v[X] | chip8_v[Y];
-  chip8_v[0xf] = 0;
+  if (chip8_quirks[CHIP8_VF_RESET]) chip8_v[0xf] = 0;
 }
 void CHIP8_8XY2(uint8_t X, uint8_t Y) {
   chip8_v[X] = chip8_v[X] & chip8_v[Y];
-  chip8_v[0xf] = 0;
+  if (chip8_quirks[CHIP8_VF_RESET]) chip8_v[0xf] = 0;
 }
 void CHIP8_8XY3(uint8_t X, uint8_t Y) {
   chip8_v[X] = chip8_v[X] ^ chip8_v[Y];
-  chip8_v[0xf] = 0;
+  if (chip8_quirks[CHIP8_VF_RESET]) chip8_v[0xf] = 0;
 }
 void CHIP8_8XY4(uint8_t X, uint8_t Y) {
   if (chip8_v[Y] > 255 - chip8_v[X]) {
@@ -136,7 +136,7 @@ void CHIP8_8XY5(uint8_t X, uint8_t Y) {
 }
 
 void CHIP8_8XY6(uint8_t X, uint8_t Y) {
-  if (!chip8_quirks[SHIFT]) {
+  if (!chip8_quirks[CHIP8_SHIFT]) {
     chip8_v[X] = chip8_v[Y];
   }
   if (chip8_v[X] & 0x1) {
@@ -157,7 +157,7 @@ void CHIP8_8XY7(uint8_t X, uint8_t Y) {
   }
 }
 void CHIP8_8XYE(uint8_t X, uint8_t Y) {
-  if (!chip8_quirks[SHIFT]) {
+  if (!chip8_quirks[CHIP8_SHIFT]) {
     chip8_v[X] = chip8_v[Y];
   }
   if (chip8_v[X] & 0x80) {
@@ -183,7 +183,7 @@ void CHIP8_ANNN(uint16_t NNN) {
 }
 
 void CHIP8_BNNN(uint8_t X, uint16_t NNN) {
-  if (chip8_quirks[JUMP]) {
+  if (chip8_quirks[CHIP8_JUMP]) {
     chip8_pc = chip8_v[X]+NNN;
   } else {
     chip8_pc = chip8_v[0]+NNN;
@@ -210,7 +210,7 @@ void CHIP8_DXYN(uint8_t X, uint8_t Y, uint8_t N) {
     uint8_t row = chip8_ram[chip8_index+i];
     // for each bit in the row
     for (uint8_t j = 0; j < 8; j++) {
-      if (!chip8_quirks[WRAP] && (x + j == CHIP8_SCREEN_WIDTH)) {
+      if (!chip8_quirks[CHIP8_WRAP] && (x + j == CHIP8_SCREEN_WIDTH)) {
         break;
       }
       uint8_t spritebit = row & (0x80 >> j);
@@ -279,12 +279,12 @@ void CHIP8_FX33(uint8_t X) {
   chip8_ram[chip8_index+2] = chip8_v[X] % 10;
 }
 void CHIP8_FX55(uint8_t X) {
-  if (!chip8_quirks[MEM_I_UNCHANGED]) {
+  if (!chip8_quirks[CHIP8_MEM_I_UNCHANGED]) {
     for (int i = 0; i <= X; i++) {
       chip8_ram[chip8_index] = chip8_v[i];
       chip8_index++;
     }
-    if (chip8_quirks[MEM_INCREMENT_X]) {
+    if (chip8_quirks[CHIP8_MEM_INCREMENT_X]) {
       chip8_index--;
     }
   } else {
@@ -294,12 +294,12 @@ void CHIP8_FX55(uint8_t X) {
   }
 }
 void CHIP8_FX65(uint8_t X) {
-  if (!chip8_quirks[MEM_I_UNCHANGED]) {
+  if (!chip8_quirks[CHIP8_MEM_I_UNCHANGED]) {
     for (int i = 0; i <= X; i++) {
       chip8_v[i] = chip8_ram[chip8_index];
       chip8_index++;
     }
-    if (chip8_quirks[MEM_INCREMENT_X]) {
+    if (chip8_quirks[CHIP8_MEM_INCREMENT_X]) {
       chip8_index--;
     }
   } else {
@@ -451,7 +451,7 @@ void CHIP8_cycle(uint16_t keyboard, uint8_t ipf) {
       CHIP8_CXNN(X, NN);
       break;
     case 0xD:
-      if (chip8_quirks[VBLANK]) {
+      if (chip8_quirks[CHIP8_VBLANK]) {
         if (ipf == 0) {
           CHIP8_DXYN(X, Y, N);
         } else {

@@ -9,14 +9,15 @@
 #define CHIP8_STACK_DEPTH 16
 #define CHIP8_NUM_QUIRKS 7
 
+// for information about these quirks, go to database/quirks.json
 enum {
-  SHIFT,
-  MEM_INCREMENT_X,
-  MEM_I_UNCHANGED,
-  WRAP,
-  JUMP,
-  VBLANK,
-  VF_RESET
+  CHIP8_SHIFT,
+  CHIP8_MEM_INCREMENT_X,
+  CHIP8_MEM_I_UNCHANGED,
+  CHIP8_WRAP,
+  CHIP8_JUMP,
+  CHIP8_VBLANK,
+  CHIP8_VF_RESET
 };
 
 
