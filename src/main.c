@@ -50,7 +50,6 @@ char* calc_sha1(char* rom_path) {
 bool query_database(char* rom_path) {
   // Calculate the SHA1 hash of a ROM file
   char* sha1 = calc_sha1(rom_path);
-  printf("%s\n",sha1);
 
   // Look up the SHA1 hash in sha1-hashes.json, which gives you an index
   // Use the index to find the program metadata in the programs.json file
@@ -192,8 +191,6 @@ int main(int argc, char** argv) {
   uint32_t pixelWidth = settings->screen_width/CHIP8_SCREEN_WIDTH;
 
   // Initialization
-  /*query_database(argv[1]);
-  return 0;*/
 
   // for the chip8
   uint16_t keyboard = 0;
@@ -203,7 +200,10 @@ int main(int argc, char** argv) {
     settings->chip8_clock_speed/settings->target_fps;
   #endif
   CHIP8_initialize(quirks);
-  CHIP8_load(argv[1]);
+  if (!CHIP8_load(argv[1])) {
+    return 1;
+  }
+  query_database(argv[1]);
 
   // for sdl
   SDL_SetAppMetadata("chip8", "1.0", "");

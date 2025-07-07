@@ -30,7 +30,7 @@ extern uint8_t chip8_ram[CHIP8_RAM_SIZE];
 //extern uint8_t chip8_draw_flag;
 
 void CHIP8_initialize(uint8_t* quirks);
-void CHIP8_load(char* rom_path);
+bool CHIP8_load(char* rom_path);
 void CHIP8_cycle(uint16_t keyboard, uint8_t ipf);
 void CHIP8_dump();
 

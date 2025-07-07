@@ -1,9 +1,11 @@
 #include <stdint.h>
 #include <stdio.h>
 #include <string.h>
-#include <chip8.h>
 #include <stdlib.h>
+#include <stdbool.h>
 #include <time.h>
+
+#include <chip8.h>
 
 uint8_t chip8_ram[CHIP8_RAM_SIZE];
 uint8_t chip8_screen[CHIP8_SCREEN_HEIGHT][CHIP8_SCREEN_WIDTH];
@@ -319,11 +321,12 @@ void CHIP8_initialize(uint8_t* quirks) {
 }
 
 
-void CHIP8_load(char* rom_path) {
+bool CHIP8_load(char* rom_path) {
   FILE* fptr = fopen(rom_path, "rb");
   if (!fptr) {
     printf("failed to open rom file\n");
-    abort();
+    return false;
+    
   }
   printf("reading rom\n");
 
@@ -335,7 +338,7 @@ void CHIP8_load(char* rom_path) {
   }
   printf("done\n");
   fclose(fptr);
-  return;
+  return true;
 }
 
 
