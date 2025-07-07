@@ -12,94 +12,17 @@
 #include <cJSON.h>
 
 #include <chip8.h>
+#include <io_chip8.h>
 
 #define SINGLE_STEP_MODE 0
 #define GAPS 1
-
-const char* config_name = "chip8_config.ini";
 
 // lets try this
 // default: try a database lookup, then switch to the config 
 // option: force config quirks
 // option: try database and exit on fail
-uint8_t quirks[CHIP8_NUM_QUIRKS] = {0};
-
-char* calc_sha1(char* rom_path) {
-  FILE *f;
-  int i, j;
-  char* output = (char*)malloc(41);
-  sha1_context ctx;
-  unsigned char buf[1000];
-  unsigned char sha1sum[20];
-
-  if (!(f = fopen(rom_path, "rb"))) {
-    return NULL;
-  }
-  sha1_starts(&ctx);
-  while((i = fread(buf, 1, sizeof(buf), f)) > 0) {
-    sha1_update(&ctx, buf, i);
-  }
-  sha1_finish(&ctx, sha1sum);
-  
-  for (j = 0; j < 20; j++) {
-    sprintf(output+j*2, "%02x", sha1sum[j]);
-  }
-  return output;
-}
-
-bool query_database(char* rom_path) {
-  // Calculate the SHA1 hash of a ROM file
-  char* sha1 = calc_sha1(rom_path);
-
-  // Look up the SHA1 hash in sha1-hashes.json, which gives you an index
-  // Use the index to find the program metadata in the programs.json file
-  // Find the ROM metadata in the roms list of the program metadata
-  // Configure your interpreter to run the ROM using platforms.json and quirks.json
-  return true;
-}
 
 
-typedef struct chip8_settings {
-  uint32_t screen_width;
-  uint32_t screen_height;
-  uint32_t target_fps;
-  uint32_t chip8_clock_speed;
-
-} chip8_settings;
-
-bool read_config(chip8_settings* settings) {
-  const char* basepath = SDL_GetBasePath();
-  uint32_t len = SDL_strlen(basepath) + SDL_strlen(config_name);
-  char* confpath = (char*)SDL_malloc(len);
-  SDL_memcpy(confpath, basepath, (SDL_strlen(basepath)-6));
-  SDL_strlcat(confpath, config_name, len);
-
-  dictionary* ini = iniparser_load(confpath);
-  settings->screen_width = iniparser_getint(ini, "sdl:screen_width", -1);
-  settings->screen_height = iniparser_getint(ini, "sdl:screen_height", -1);
-  settings->target_fps = iniparser_getint(ini, "sdl:target_fps", -1);
-  settings->chip8_clock_speed = iniparser_getint(ini, 
-      "chip8:chip8_clock_speed", -1);
-
-  // parse quirks
-  quirks[CHIP8_SHIFT] = iniparser_getint(ini, "chip8:shift", -1);
-
-  quirks[CHIP8_MEM_INCREMENT_X] = iniparser_getint(ini, "chip8:mem_increment_x:", -1);
-
-  quirks[CHIP8_MEM_I_UNCHANGED] = iniparser_getint(ini, "chip8:mem_i_unchanged", -1);
-
-  quirks[CHIP8_WRAP] = iniparser_getint(ini, "chip8:wrap", -1);
-
-  quirks[CHIP8_JUMP] = iniparser_getint(ini, "chip8:jump", -1);
-
-  quirks[CHIP8_VBLANK] = iniparser_getint(ini, "chip8:vblank", -1);
-
-  quirks[CHIP8_VF_RESET] = iniparser_getint(ini, "chip8:vf_reset", -1);
-  
-  iniparser_freedict(ini);
-  SDL_free(confpath);
-  return true;
-}
 
 void audio_linear_fade_in(float* samples, uint32_t nsamples, 
     float fade_length) {
