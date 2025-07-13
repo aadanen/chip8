@@ -101,7 +101,7 @@ typedef struct chip8_settings {
   uint32_t screen_width;
   uint32_t screen_height;
   uint32_t target_fps;
-  uint32_t chip8_clock_speed;
+  uint32_t tickrate;
 
 } chip8_settings;
 
@@ -145,8 +145,8 @@ bool read_config(chip8_settings* settings) {
   settings->screen_width = iniparser_getint(ini, "sdl:screen_width", -1);
   settings->screen_height = iniparser_getint(ini, "sdl:screen_height", -1);
   settings->target_fps = iniparser_getint(ini, "sdl:target_fps", -1);
-  settings->chip8_clock_speed = iniparser_getint(ini, 
-      "chip8:chip8_clock_speed", -1);
+  settings->tickrate= iniparser_getint(ini, 
+      "chip8:tickrate", -1);
 
   // parse quirks
   quirks[CHIP8_SHIFT] = iniparser_getint(ini, "chip8:shift", -1);
@@ -188,7 +188,7 @@ cJSON* load_chip8db_json(char* dbpath, char** buffer, size_t* fsize) {
 }
 
 
-bool query_database(char* rom_path) {
+bool query_database(char* rom_path, chip8_settings* settings) {
   // Calculate the SHA1 hash of a ROM file
   char* sha1 = calc_sha1(rom_path);
 
@@ -217,6 +217,7 @@ bool query_database(char* rom_path) {
   cJSON* myprogram = cJSON_GetArrayItem(programs, program_index);
   char* pstr = cJSON_Print(myprogram);
   printf("%s\n", pstr);
+  free(pstr);
 
   if (myprogram == NULL) {
     printf("failed to locate program\n");
@@ -263,6 +264,9 @@ end:;
 
   cJSON* quirks_json = cJSON_GetObjectItemCaseSensitive(platform_target, 
       "quirks");
+  cJSON* tickrate_json = cJSON_GetObjectItemCaseSensitive(platform_target, 
+      "defaultTickrate");
+  settings->tickrate = tickrate_json->valueint;
 
   #define GET_QUIRK(name) cJSON_GetObjectItemCaseSensitive(quirks_json, name)
   #define READ_QUIRK(ptr) cJSON_IsBool(ptr) && cJSON_IsTrue(ptr)
@@ -275,8 +279,13 @@ end:;
   quirks[CHIP8_VBLANK] = READ_QUIRK(GET_QUIRK("vblank"));
   quirks[CHIP8_VF_RESET] = READ_QUIRK(GET_QUIRK("logic"));
 
+
+  cJSON_Delete(hashes);
+  cJSON_Delete(programs);
+  cJSON_Delete(platforms_json);
   free(dbpath);
   free(buffer);
+  free(sha1);
   return true;
 }
 

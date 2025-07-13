@@ -14,8 +14,8 @@
 #include <chip8.h>
 #include <io_chip8.h>
 
-#define SINGLE_STEP_MODE 0
 #define GAPS 1
+#define MAXSPEED 0
 
 // lets try this
 // default: try a database lookup, then switch to the config 
@@ -119,15 +119,11 @@ int main(int argc, char** argv) {
   // for the chip8
   uint16_t keyboard = 0;
   uint32_t target_ticks_per_frame = 1000/settings->target_fps;
-  #if !(SINGLE_STEP_MODE)
-  const uint32_t cycles_per_frame = 
-    settings->chip8_clock_speed/settings->target_fps;
-  #endif
   CHIP8_initialize(quirks);
   if (!CHIP8_load(argv[1])) {
     return 1;
   }
-  query_database(argv[1]);
+  query_database(argv[1], settings);
 
   // for sdl
   SDL_SetAppMetadata("chip8", "1.0", "");
@@ -207,16 +203,9 @@ int main(int argc, char** argv) {
     const bool *sdl_keyboard = SDL_GetKeyboardState(numkeys);
     keyboard = get_keypad(sdl_keyboard);
 
-    #if !(SINGLE_STEP_MODE)
-    for (uint32_t i = 0; i < cycles_per_frame; i++) {
+    for (uint32_t i = 0; i < settings->tickrate; i++) {
       CHIP8_cycle(keyboard, i);
     }
-    #else
-    if (1) {
-      CHIP8_dump();
-      CHIP8_cycle(keyboard);
-    }
-    #endif
 
     // audio
     if (chip8_sound > 0 && !playing_audio) {
@@ -269,6 +258,9 @@ int main(int argc, char** argv) {
 
 
     SDL_RenderPresent(renderer);
+    char title[20];
+    sprintf(title, "%.2f Mips", (double)settings->tickrate);
+    SDL_SetWindowTitle(window, title);
 
 
     // sound
@@ -278,11 +270,14 @@ int main(int argc, char** argv) {
     if (chip8_delay > 0) {
       chip8_delay--;
     }
+    #ifdef (!MAX_SPEED)
     elapsed_ticks = SDL_GetTicks() - frame_start_ticks;
     if (elapsed_ticks < target_ticks_per_frame) {
       SDL_Delay(target_ticks_per_frame - elapsed_ticks);
     }
+    #endif
   }
+  free(settings);
   SDL_Quit();
   return 0;
 }
