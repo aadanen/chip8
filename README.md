@@ -23,4 +23,4 @@ The chip8 community, as well as the wider EmuDev community is fantastic. There a
 [https://github.com/Timendus/chip8-test-suite](https://github.com/Timendus/chip8-test-suite)  
 
 ## credits
-this project was greatly assisted by all the open source libraries and code I used and all the help from the people in the emulator development discord. I really appreciate it and I will see what I can do to give back
+this project was greatly assisted by all the open source libraries and code I used and all the help from the people in the emulator development discord. I really appreciate it. Hopefully once I have more skill I'll be able to give back to the community
