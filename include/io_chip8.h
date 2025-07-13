@@ -9,6 +9,9 @@
 
 const char* config_name = "chip8_config.ini";
 const char* sha1_name = "database/sha1-hashes.json";
+const char* programs_name = "database/programs.json";
+const char* platforms_name = "database/platforms.json";
+const char* quirks_name = "database/quirks.json";
 
 uint8_t quirks[CHIP8_NUM_QUIRKS] = {0};
 
@@ -165,18 +168,7 @@ bool read_config(chip8_settings* settings) {
   return true;
 }
 
-
-bool query_database(char* rom_path) {
-  // Calculate the SHA1 hash of a ROM file
-  char* sha1 = calc_sha1(rom_path);
-
-  // Look up the SHA1 hash in sha1-hashes.json, which gives you an index
-
-  // the longest filename in database is 16 characters
-  // it also just happens to be the first file i need so ill reuse this buffer
-  char* buffer;
-  char* dbpath = create_abs_path(sha1_name);
-  size_t fsize;
+cJSON* load_chip8db_json(char* dbpath, char** buffer, size_t* fsize) {
   int err;
 
   FILE* fptr = fopen(dbpath, "r");
@@ -184,25 +176,105 @@ bool query_database(char* rom_path) {
     printf("failed to open %s\n", dbpath);
     return false;
   }
-  err = readall(fptr, &buffer, &fsize);
+
+  err = readall(fptr, buffer, fsize);
   if (err != 0) {
     printf("failed to read %s\n", dbpath);
     return false;
   }
 
-  const cJSON* hashes = cJSON_Parse(buffer);
-  const cJSON* program;
-  int32_t program_index = -1;
-  program = cJSON_GetObjectItemCaseSensitive(hashes, sha1);
-  if (program == NULL) {
+  cJSON* json = cJSON_Parse(*buffer);
+  return json;
+}
+
+
+bool query_database(char* rom_path) {
+  // Calculate the SHA1 hash of a ROM file
+  char* sha1 = calc_sha1(rom_path);
+
+  // Look up the SHA1 hash in sha1-hashes.json, which gives you an index
+  char* buffer;
+  char* dbpath = create_abs_path(sha1_name);
+  size_t fsize;
+
+  cJSON* hashes = load_chip8db_json(dbpath, &buffer, &fsize);
+  cJSON* myhash;
+  myhash = cJSON_GetObjectItemCaseSensitive(hashes, sha1);
+
+  if (myhash == NULL) {
     printf("failed to locate hash %s\n", sha1);
     return false;
   }
-  printf("%d\n", program->valueint);
+  free(buffer);
+  free(dbpath);
+
+
+  int program_index = myhash->valueint;
 
   // Use the index to find the program metadata in the programs.json file
+  dbpath = create_abs_path(programs_name);
+  cJSON* programs = load_chip8db_json(dbpath, &buffer, &fsize);
+  cJSON* myprogram = cJSON_GetArrayItem(programs, program_index);
+  char* pstr = cJSON_Print(myprogram);
+  printf("%s\n", pstr);
+
+  if (myprogram == NULL) {
+    printf("failed to locate program\n");
+    return false;
+  }
+  free(buffer);
+  free(dbpath);
+
   // Find the ROM metadata in the roms list of the program metadata
+  cJSON* roms = cJSON_GetObjectItemCaseSensitive(myprogram, "roms");
+  if (roms == NULL) {
+    printf("failed to locate roms\n");
+    return false;
+  }
+
+  // pick the right rom
+  cJSON* myrom = cJSON_GetObjectItemCaseSensitive(roms, sha1);
+  if (myrom == NULL) {
+    printf("failed to locate rom entry\n");
+    return false;
+  }
+  
+  cJSON* platforms = cJSON_GetObjectItemCaseSensitive(myrom, "platforms");
+  if (platforms == NULL) {
+    printf("failed to locate platforms array\n");
+    return false;
+  }
+
+  // by default just pick the first supported platform
+  cJSON* myplatform = cJSON_GetArrayItem(platforms, 0);
+
+
   // Configure your interpreter to run the ROM using platforms.json and quirks.json
+  dbpath = create_abs_path(platforms_name);
+  cJSON* platforms_json = load_chip8db_json(dbpath, &buffer, &fsize);
+  cJSON* platform_target;
+  cJSON_ArrayForEach(platform_target, platforms_json) {
+    cJSON* pid = cJSON_GetObjectItemCaseSensitive(platform_target, "id");
+    if (strcmp(myplatform->valuestring, pid->valuestring) == 0) {
+      goto end;
+    } 
+  }
+end:;
+
+  cJSON* quirks_json = cJSON_GetObjectItemCaseSensitive(platform_target, 
+      "quirks");
+
+  #define GET_QUIRK(name) cJSON_GetObjectItemCaseSensitive(quirks_json, name)
+  #define READ_QUIRK(ptr) cJSON_IsBool(ptr) && cJSON_IsTrue(ptr)
+  //quirk_ptr = cJSON_GetObjectItemCaseSensitive(quirks_json, "shift");
+  quirks[CHIP8_SHIFT] = READ_QUIRK(GET_QUIRK("shift"));
+  quirks[CHIP8_MEM_INCREMENT_X] = READ_QUIRK(GET_QUIRK("memoryIncrementByX"));
+  quirks[CHIP8_MEM_I_UNCHANGED] = READ_QUIRK(GET_QUIRK("memoryLeaveIUnchanged"));
+  quirks[CHIP8_WRAP] = READ_QUIRK(GET_QUIRK("wrap"));
+  quirks[CHIP8_JUMP] = READ_QUIRK(GET_QUIRK("jump"));
+  quirks[CHIP8_VBLANK] = READ_QUIRK(GET_QUIRK("vblank"));
+  quirks[CHIP8_VF_RESET] = READ_QUIRK(GET_QUIRK("logic"));
+
   free(dbpath);
   free(buffer);
   return true;
