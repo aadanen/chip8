@@ -106,6 +106,7 @@ int main(int argc, char** argv) {
     return 1;
   }
   chip8_settings* settings = (chip8_settings*)SDL_malloc(sizeof(*settings));
+  // the config also manually sets the quriks in case the db lookup fails
   if (!read_config(settings)) {
     return 1;
   }
