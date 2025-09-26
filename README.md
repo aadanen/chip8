@@ -1,5 +1,5 @@
 # chip8
-My take on a CHIP-8 Interpreter. This is a practice project to dip my toes into emulator development.
+My take on a CHIP-8 Interpreter.
 
 ## building
 Get yourself a copy of the dependencies (which all use cmake)
