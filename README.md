@@ -10,11 +10,16 @@ git clone https://github.com/libsdl-org/SDL.git
 git clone https://gitlab.com/iniparser/iniparser.git
 git clone https://github.com/DaveGamble/cJSON.git
 ```
+Note that SDL requires several system packages you might not have installed. 
+Check out their [build documentation](https://github.com/libsdl-org/SDL/blob/main/docs/README-linux.md) if you get build errors.
+
+
 Use my top level CMakeLists.txt
 ```
 mkdir build
 cd build
 cmake ..
+make
 ```
 ## resources
 The chip8 community, as well as the wider EmuDev community is fantastic. There are many resources and tools to help get beginners started.  
