@@ -15,7 +15,6 @@
 #include <io_chip8.h>
 
 #define GAPS 1
-#define MAXSPEED 0
 
 // lets try this
 // default: try a database lookup, then switch to the config 
@@ -270,12 +269,10 @@ int main(int argc, char** argv) {
     if (chip8_delay > 0) {
       chip8_delay--;
     }
-    #ifdef (!MAX_SPEED)
     elapsed_ticks = SDL_GetTicks() - frame_start_ticks;
     if (elapsed_ticks < target_ticks_per_frame) {
       SDL_Delay(target_ticks_per_frame - elapsed_ticks);
     }
-    #endif
   }
   free(settings);
   SDL_Quit();
