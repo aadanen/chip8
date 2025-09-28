@@ -1,5 +1,7 @@
 # chip8
 My take on a CHIP-8 Interpreter that automatically configures itself based on the supplied ROM.
+<img width="1108" height="641" alt="Screenshot_20250928_164910" src="https://github.com/user-attachments/assets/8ca285ea-ca77-43f6-8e87-d20af93ae504" />
+
 
 ## building
 Get yourself a copy of the dependencies (which all use cmake)
